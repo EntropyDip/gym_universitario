@@ -4,6 +4,7 @@ from dataclasses import dataclass
 class Usuario:
     nombre: str
     documento: str
+    programa: str
 
 @dataclass
 class Reserva:
@@ -42,13 +43,14 @@ class Gym:
         self.horarios_disponibles: list[str] = ["08:00 AM", "10:00 AM", "02:00 PM"]
         self.tiempo_maximo = tiempo_maximo
         self.reservas: dict[str, str] = {}
+        self.registros: list[dict] = []
 
-    def registrar_usuario(self, nombre:str, documento:str) -> None:
+    def registrar_usuario(self, nombre:str, documento:str, programa: str) -> str:
         for u in self.usuarios:
             if u.documento  == documento:
                 return f"el documento {documento} ya se encuentra registrado"
 
-        nuevo_usuario = Usuario(nombre, documento)
+        nuevo_usuario = Usuario(nombre, documento, programa)
         self.usuarios.append(nuevo_usuario)
         return f"Usuario {nombre} registrado exitosamente."
 
@@ -79,6 +81,40 @@ class Gym:
 
         self.reservas[documento] = horario_deseado
         return f"¡Reserva exitosa! {nombre_usuario} tiene su espacio a las {horario_deseado}. el tiempo para estar haciendo uso del gym es: {self.tiempo_maximo}."
+    
+    def registrar_visita(self, documento: str, horario: str,  duracion: int, equipos: list[str]) -> str:
+        usuario_encontrado = any(u.documento == documento for u in self.usuarios)
+    
+        if not usuario_encontrado:
+            return "El usuario no está registrado."
+    
+        registro = {"documento": documento, "horario": horario,"duracion": duracion, "equipos": equipos}
+    
+        self.registros.append(registro)
+    
+        return "Visita registrada correctamente."
+    
+    def horario_mas_frecuente(self) -> str:
+    
+        if not self.registros:
+            return "No hay visitas registradas."
+    
+        horarios = [registro["horario"] for registro in self.registros]
+    
+        horario = max(set(horarios), key=horarios.count)
+    
+        return f"El horario más frecuente es {horario}."
+    
+    def programa_mas_frecuente(self) -> str:
+    
+        if not self.usuarios:
+            return "No hay usuarios registrados."
+    
+        programas = [usuario.programa for usuario in self.usuarios]
+    
+        carrera = max(set(programas), key=programas.count)
+    
+        return f"La carrera más frecuente es {carrera}."
 
 if __name__ == "__main__":
     mi_gym = Gym("Gimnasio Universidad")

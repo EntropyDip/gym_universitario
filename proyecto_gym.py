@@ -11,21 +11,22 @@ class Reserva:
     documento: str
     nombre_usuario: str
     horario: str
+    fecha: str 
     activa: bool = True
 
     def cancelar(self) -> str:
-            """Marca la reserva como cancelada."""
-            if not self.activa:
-                return f"La reserva de {self.nombre_usuario} ya estaba cancelada."
-            self.activa = False
-            return f"Reserva de {self.nombre_usuario} a las {self.horario} cancelada."
+        """Marca la reserva como cancelada."""
+        if not self.activa:
+            return f"La reserva de {self.nombre_usuario} ya estaba cancelada."
+        self.activa = False
+        return f"Reserva de {self.nombre_usuario} a las {self.horario} cancelada."
     
     def confirmar(self) -> str:
-            """Se reactiva una reserva previamente cancelada."""
-            if self.activa:
-                return f"La reserva de {self.nombre_usuario} ya está activa."
-            self.activa = True
-            return f"Reserva de {self.nombre_usuario} confirmada nuevamente para las {self.horario}."
+        """Se reactiva una reserva previamente cancelada."""
+        if self.activa:
+            return f"La reserva de {self.nombre_usuario} ya está activa."
+        self.activa = True
+        return f"Reserva de {self.nombre_usuario} confirmada nuevamente para las {self.horario}."
 
     def coincide_con(self, documento: str) -> bool:
         """Verificamos si esta reserva pertenece a un documento dado."""
@@ -42,10 +43,10 @@ class Gym:
         self.usuarios: list[Usuario] = []
         self.horarios_disponibles: list[str] = ["08:00 AM", "10:00 AM", "02:00 PM"]
         self.tiempo_maximo = tiempo_maximo
-        self.reservas: dict[str, str] = {}
+        self.reservas: list[Reserva] = []
         self.registros: list[dict] = []
 
-    def registrar_usuario(self, nombre:str, documento:str, programa: str) -> str:
+    def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
         for u in self.usuarios:
             if u.documento  == documento:
                 return f"el documento {documento} ya se encuentra registrado"
@@ -54,13 +55,15 @@ class Gym:
         self.usuarios.append(nuevo_usuario)
         return f"Usuario {nombre} registrado exitosamente."
 
-    def cancelar_registro(self, nombre:str, documento:str) -> str:
+    def eliminar_usuario(self, nombre:str, documento:str) -> str:
         for usuario in self.usuarios:
             if usuario.nombre == nombre and usuario.documento == documento:
                 self.usuarios.remove(usuario)
-                return f"el usuario {nombre} cancelo la reserva de forma exitosa"
+                return f"el usuario {nombre} fue eliminado correctamente"
+                
+        return "El usuario no está registrado"
 
-    def realizar_reserva(self, documento: str, horario_deseado: str) -> str:
+    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str) -> str:
         usuario_encontrado = False
         nombre_usuario = ""
 
@@ -73,18 +76,27 @@ class Gym:
         if not usuario_encontrado:
             return f"Error: El documento {documento} no está registrado para hacer la reserva"
 
+        for reserva in self.reservas:
+            if reserva.documento == documento and reserva.fecha == fecha and reserva.activa:
+                return f"El usuario {nombre_usuario} ya tiene una reserva activa."
+        
         if horario_deseado not in self.horarios_disponibles:
             agenda_formateada = " | ".join(self.horarios_disponibles)
             return (f"El horario '{horario_deseado}' no existe.\n"
                     f"Horarios disponibles: {agenda_formateada}\n"
                     f"Tiempo máximo permitido por sesión: {self.tiempo_maximo}.")
-
-        self.reservas[documento] = horario_deseado
+            
+        nueva_reserva = Reserva(documento, nombre_usuario, horario_deseado, fecha)
+        self.reservas.append(nueva_reserva)
+        
         return f"¡Reserva exitosa! {nombre_usuario} tiene su espacio a las {horario_deseado}. el tiempo para estar haciendo uso del gym es: {self.tiempo_maximo}."
     
     def registrar_visita(self, documento: str, horario: str,  duracion: int, equipos: list[str]) -> str:
-        usuario_encontrado = any(u.documento == documento for u in self.usuarios)
-    
+        usuario_encontrado = False 
+        for u in self.usuarios: 
+            if u.documento == documento: 
+                usuario_encontrado = True 
+                break
         if not usuario_encontrado:
             return "El usuario no está registrado."
     
@@ -99,22 +111,50 @@ class Gym:
         if not self.registros:
             return "No hay visitas registradas."
     
-        horarios = [registro["horario"] for registro in self.registros]
+        conteo = {}
+
+        for registro in self.registros:
+            horario = registro["horario"]
     
-        horario = max(set(horarios), key=horarios.count)
+            if horario in conteo:
+                conteo[horario] += 1
+            else:
+                conteo[horario] = 1
     
-        return f"El horario más frecuente es {horario}."
+        horario_frecuente = ""
+        mayor = 0
+    
+        for horario in conteo:
+            if conteo[horario] > mayor:
+                mayor = conteo[horario]
+                horario_frecuente = horario
+    
+        return f"El horario más frecuente es {horario_frecuente}."
     
     def programa_mas_frecuente(self) -> str:
     
         if not self.usuarios:
             return "No hay usuarios registrados."
     
-        programas = [usuario.programa for usuario in self.usuarios]
+        conteo = {}
+
+        for usuario in self.usuarios:
+            programa = usuario.programa
     
-        carrera = max(set(programas), key=programas.count)
+            if programa in conteo:
+                conteo[programa] += 1
+            else:
+                conteo[programa] = 1
     
-        return f"La carrera más frecuente es {carrera}."
+        programa_frecuente = ""
+        mayor = 0
+    
+        for programa in conteo:
+            if conteo[programa] > mayor:
+                mayor = conteo[programa]
+                programa_frecuente = programa
+        
+        return f"La carrera más frecuente es {programa_frecuente}."
 
 if __name__ == "__main__":
     mi_gym = Gym("Gimnasio Universidad")

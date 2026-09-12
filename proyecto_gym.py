@@ -2,12 +2,14 @@ from dataclasses import dataclass
 
 @dataclass
 class Usuario:
+# Representa a un usuario del gimnasio y guarda sus datos personales y académicos.
     nombre: str
     documento: str
     programa: str
 
 @dataclass
 class Reserva:
+# Representa una reserva del gimnasio y almacena sus datos y estado.
     documento: str
     nombre_usuario: str
     horario: str
@@ -15,30 +17,32 @@ class Reserva:
     activa: bool = True
 
     def cancelar(self) -> str:
-        """Marca la reserva como cancelada."""
+# Cancela una reserva activa y actualiza su estado.        
         if not self.activa:
             return f"La reserva de {self.nombre_usuario} ya estaba cancelada."
         self.activa = False
         return f"Reserva de {self.nombre_usuario} a las {self.horario} cancelada."
     
     def confirmar(self) -> str:
-        """Se reactiva una reserva previamente cancelada."""
+# Reactiva una reserva que había sido cancelada.
         if self.activa:
             return f"La reserva de {self.nombre_usuario} ya está activa."
         self.activa = True
         return f"Reserva de {self.nombre_usuario} confirmada nuevamente para las {self.horario}."
 
     def coincide_con(self, documento: str) -> bool:
-        """Verificamos si esta reserva pertenece a un documento dado."""
+# Comprueba si la reserva pertenece al documento indicado.
         return self.documento == documento
 
     def mostrar_resumen(self) -> str:
-        """Se devuelve un texto legible con los datos de la reserva."""
+ # Muestra de forma resumida los datos y estado de la reserva.
         estado = "activa" if self.activa else "cancelada"
         return f"Reserva ({estado}) — {self.nombre_usuario} ({self.documento}) a las {self.horario}"
 
 class Gym:
+# Gestiona usuarios, reservas, visitas y horarios del gimnasio.
     def __init__(self, nombre: str, tiempo_maximo: str = "1:30 horas") -> None:
+# Inicializa el gimnasio con su nombre, horarios, usuarios y registros.
         self.name = nombre
         self.usuarios: list[Usuario] = []
         self.horarios_disponibles: list[str] = ["08:00 AM", "10:00 AM", "02:00 PM"]
@@ -47,6 +51,7 @@ class Gym:
         self.registros: list[dict] = []
 
     def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
+# Registra un nuevo usuario verificando que su documento no esté repetido.
         for u in self.usuarios:
             if u.documento  == documento:
                 return f"el documento {documento} ya se encuentra registrado"
@@ -56,6 +61,7 @@ class Gym:
         return f"Usuario {nombre} registrado exitosamente."
 
     def eliminar_usuario(self, nombre:str, documento:str) -> str:
+# Elimina un usuario del gimnasio usando su nombre y documento.
         for usuario in self.usuarios:
             if usuario.nombre == nombre and usuario.documento == documento:
                 self.usuarios.remove(usuario)
@@ -64,6 +70,7 @@ class Gym:
         return "El usuario no está registrado"
 
     def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str) -> str:
+# Permite reservar un horario disponible para un usuario registrado.
         usuario_encontrado = False
         nombre_usuario = ""
 
@@ -92,6 +99,7 @@ class Gym:
         return f"¡Reserva exitosa! {nombre_usuario} tiene su espacio a las {horario_deseado}. el tiempo para estar haciendo uso del gym es: {self.tiempo_maximo}."
     
     def registrar_visita(self, documento: str, horario: str,  duracion: int, equipos: list[str]) -> str:
+# Registra una visita indicando horario, duración y equipos utilizados.
         usuario_encontrado = False 
         for u in self.usuarios: 
             if u.documento == documento: 
@@ -107,7 +115,7 @@ class Gym:
         return "Visita registrada correctamente."
     
     def horario_mas_frecuente(self) -> str:
-    
+# Determina el horario en el que se registran más visitas al gimnasio.
         if not self.registros:
             return "No hay visitas registradas."
     
@@ -132,7 +140,7 @@ class Gym:
         return f"El horario más frecuente es {horario_frecuente}."
     
     def programa_mas_frecuente(self) -> str:
-    
+# Determina el programa académico con más usuarios registrados.    
         if not self.usuarios:
             return "No hay usuarios registrados."
     
@@ -155,7 +163,8 @@ class Gym:
                 programa_frecuente = programa
         
         return f"La carrera más frecuente es {programa_frecuente}."
-
+        
+# Ejecuta ejemplos del sistema cuando el archivo se ejecuta directamente.
 if __name__ == "__main__":
     mi_gym = Gym("Gimnasio Universidad")
     mi_gym.registrar_usuario("Juan Jose", "1001")

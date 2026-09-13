@@ -167,11 +167,30 @@ class Gym:
 # Ejecuta ejemplos del sistema cuando el archivo se ejecuta directamente.
 if __name__ == "__main__":
     mi_gym = Gym("Gimnasio Universidad")
-    mi_gym.registrar_usuario("Juan Jose", "1001")
 
-    # Intento con una hora incorrecta para ver la agenda
-    print(mi_gym.realizar_reserva("1001", "07:00 AM"))
+    # Registro de los 3 estudiantes (todos en Ingeniería de Sistemas)
+    print(mi_gym.registrar_usuario("Juan Jose Aguirre", "1001", "Ingeniería de Sistemas"))
+    print(mi_gym.registrar_usuario("Samuel Zapata", "1002", "Ingeniería de Sistemas"))
+    print(mi_gym.registrar_usuario("Angelina Negrette", "1003", "Ingeniería de Sistemas"))
+
+    # Usuarios adicionales de otros programas
+    print(mi_gym.registrar_usuario("Mariana Restrepo", "1004", "Administración de Empresas"))
+    print(mi_gym.registrar_usuario("Carlos Herrera", "1005", "Ingeniería Industrial"))
+    print(mi_gym.registrar_usuario("Laura Gómez", "1006", "Psicología"))
+    print(mi_gym.registrar_usuario("Andrés Torres", "1007", "Ingeniería Financiera"))
     print("-" * 40)
 
-    # Reserva exitosa (ejemplo: bloque para rutina de jalón/empuje)
-    print(mi_gym.realizar_reserva("1001", "10:00 AM"))
+    # Intento con una hora incorrecta para ver la agenda disponible
+    print(mi_gym.realizar_reserva("1001", "07:00 AM", "2025-06-10"))
+    print("-" * 40)
+
+    # Reservas exitosas para varios usuarios
+    print(mi_gym.realizar_reserva("1001", "10:00 AM", "2025-06-10"))
+    print(mi_gym.realizar_reserva("1002", "08:00 AM", "2025-06-10"))
+    print(mi_gym.realizar_reserva("1003", "02:00 PM", "2025-06-10"))
+    print(mi_gym.realizar_reserva("1004", "08:00 AM", "2025-06-10"))
+    print(mi_gym.realizar_reserva("1005", "10:00 AM", "2025-06-10"))
+    print("-" * 40)
+
+    # Ver el programa más frecuente entre los usuarios registrados
+    print(mi_gym.programa_mas_frecuente())

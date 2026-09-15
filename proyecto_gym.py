@@ -244,6 +244,10 @@ class Gym:
         return (f"{usuario.nombre} obtuvo prioridad para el horario {horario} del {fecha}. "
                 f"Tiene hasta 2 horas antes para confirmar asistencia con confirmar_prioridad().")
 
+    def confirmar_prioridad(self, documento: str, horario: str, fecha: str, hora_actual: datetime) -> str:
+# Confirma (o libera) una prioridad. Si se confirma antes del límite de 2 horas antes
+# del horario, el cupo queda exclusivo. Si ya pasó ese límite, el cupo se libera solo.
+
 
 # Ejecuta ejemplos del sistema cuando el archivo se ejecuta directamente.
 if __name__ == "__main__":

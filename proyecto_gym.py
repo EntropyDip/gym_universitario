@@ -191,6 +191,60 @@ class Gym:
 
         return resultado
 
+    def prioridad_membresia(self, documento: str, horario: str, fecha: str) -> str:
+# Da prioridad exclusiva a un usuario para reservar un horario, si es "habitual" ahí
+# (ha ido varias veces a esa misma hora) o si tiene más tiempo acumulado en el gimnasio
+# que los demás usuarios.
+        usuario = None
+        for u in self.usuarios:
+            if u.documento == documento:
+                usuario = u
+                break
+
+        if usuario is None:
+            return "El usuario no está registrado."
+
+        # Si ya hay una prioridad de OTRO usuario en ese mismo horario y fecha, no se puede dar de nuevo.
+        for p in self.prioridades:
+            if p["horario"] == horario and p["fecha"] == fecha and p["documento"] != documento:
+                return f"El horario {horario} del {fecha} ya está apartado con prioridad por {p['nombre']}."
+        # ¿Es habitual en ese horario? (va seguido a esa misma hora)
+        veces_en_ese_horario = 0
+        for registro in self.registros:
+            if registro["documento"] == documento and registro["horario"] == horario:
+                veces_en_ese_horario += 1
+        es_habitual = veces_en_ese_horario >= 3
+
+        # ¿Tiene más tiempo acumulado en el gym que todos los demás?
+        tiempo_usuario = 0
+        for registro in self.registros:
+            if registro["documento"] == documento:
+                tiempo_usuario += registro["duracion"]
+
+        tiene_mas_tiempo = True
+        for otro in self.usuarios:
+            if otro.documento != documento:
+                tiempo_otro = 0
+                for registro in self.registros:
+                    if registro["documento"] == otro.documento:
+                        tiempo_otro += registro["duracion"]
+                if tiempo_otro > tiempo_usuario:
+                    tiene_mas_tiempo = False
+        if not es_habitual and not tiene_mas_tiempo:
+            return f"{usuario.nombre} no cumple los requisitos para tener prioridad en el horario {horario}."
+
+        self.prioridades.append({
+            "documento": documento,
+            "nombre": usuario.nombre,
+            "horario": horario,
+            "fecha": fecha,
+            "confirmada": False,
+        })
+
+        return (f"{usuario.nombre} obtuvo prioridad para el horario {horario} del {fecha}. "
+                f"Tiene hasta 2 horas antes para confirmar asistencia con confirmar_prioridad().")
+
+
 # Ejecuta ejemplos del sistema cuando el archivo se ejecuta directamente.
 if __name__ == "__main__":
     mi_gym = Gym("Gimnasio Universidad")

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 @dataclass
 class Usuario:
@@ -59,6 +60,8 @@ class Gym:
         self.tiempo_maximo = tiempo_maximo
         self.reservas: list[Reserva] = []
         self.registros: list[dict] = []
+        self.prioridades: list[dict] = []
+
 
     def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
     # Registra un nuevo usuario verificando que su documento no esté repetido.

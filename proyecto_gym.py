@@ -247,6 +247,22 @@ class Gym:
     def confirmar_prioridad(self, documento: str, horario: str, fecha: str, hora_actual: datetime) -> str:
 # Confirma (o libera) una prioridad. Si se confirma antes del límite de 2 horas antes
 # del horario, el cupo queda exclusivo. Si ya pasó ese límite, el cupo se libera solo.
+        if not self.prioridades:
+            return "No hay prioridades registradas."
+        hora_del_horario = datetime.strptime(f"{fecha} {horario}", "%Y-%m-%d %I:%M %p")
+        limite_para_confirmar = hora_del_horario - timedelta(hours=2)
+
+        for p in self.prioridades:
+            if p["documento"] == documento and p["horario"] == horario and p["fecha"] == fecha:
+                if hora_actual > limite_para_confirmar:
+                    self.prioridades.remove(p)
+                    return f"{p['nombre']} no confirmó a tiempo, el cupo de las {horario} del {fecha} queda libre."
+
+                p["confirmada"] = True
+                return f"{p['nombre']} confirmó su asistencia, el cupo de las {horario} del {fecha} es exclusivo."
+
+        return "No se encontró una prioridad con esos datos."
+
 
 
 # Ejecuta ejemplos del sistema cuando el archivo se ejecuta directamente.

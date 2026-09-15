@@ -7,6 +7,11 @@ class Usuario:
     documento: str
     programa: str
 
+    def __post_init__(self):
+        if not self.nombre.strip():
+            raise ValueError("El nombre no puede quedar vacío")
+        if not self.documento.strip():
+            raise ValueError("El documento no puede estar vacio")
 @dataclass
 class Reserva:
 # Representa una reserva del gimnasio y almacena sus datos y estado.
@@ -15,6 +20,11 @@ class Reserva:
     horario: str
     fecha: str 
     activa: bool = True
+
+    def __post_init__(self):
+        if not self.documento.strip():
+            raise ValueError("El documento no pued estar vacío")
+
 
     def cancelar(self) -> str:
 # Cancela una reserva activa y actualiza su estado.        
@@ -44,55 +54,44 @@ class Gym:
     def __init__(self, nombre: str, tiempo_maximo: str = "1:30 horas") -> None:
 # Inicializa el gimnasio con su nombre, horarios, usuarios y registros.
         self.name = nombre
-        self.usuarios: list[Usuario] = []
+        self.usuarios: dict[str, Usuario] = {}
         self.horarios_disponibles: list[str] = ["08:00 AM", "10:00 AM", "02:00 PM"]
         self.tiempo_maximo = tiempo_maximo
         self.reservas: list[Reserva] = []
         self.registros: list[dict] = []
 
     def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
-# Registra un nuevo usuario verificando que su documento no esté repetido.
-        for u in self.usuarios:
-            if u.documento  == documento:
-                return f"el documento {documento} ya se encuentra registrado"
-
+    # Registra un nuevo usuario verificando que su documento no esté repetido.
+        if documento in self.usuarios:
+            return f"el documento {documento} ya se encuentra registrado"
         nuevo_usuario = Usuario(nombre, documento, programa)
-        self.usuarios.append(nuevo_usuario)
+        self.usuarios[documento] = nuevo_usuario
         return f"Usuario {nombre} registrado exitosamente."
 
     def eliminar_usuario(self, nombre:str, documento:str) -> str:
-# Elimina un usuario del gimnasio usando su nombre y documento.
-        for usuario in self.usuarios:
-            if usuario.nombre == nombre and usuario.documento == documento:
-                self.usuarios.remove(usuario)
-                return f"el usuario {nombre} fue eliminado correctamente"
-                
+    # Elimina un usuario del gimnasio usando su nombre y documento.
+        if documento in self.usuarios and self.usuarios[documento].nombre == nombre:
+            self.usuarios.pop(documento)
+            return f"el usuario identificado con {documento} se eliminó correctamente"
         return "El usuario no está registrado"
 
+
     def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str) -> str:
-# Permite reservar un horario disponible para un usuario registrado.
-        usuario_encontrado = False
-        nombre_usuario = ""
-
-        for u in self.usuarios:
-            if u.documento == documento:
-                usuario_encontrado = True
-                nombre_usuario = u.nombre
-                break
-
-        if not usuario_encontrado:
+        if documento not in self.usuarios:
             return f"Error: El documento {documento} no está registrado para hacer la reserva"
 
-        for reserva in self.reservas:
-            if reserva.documento == documento and reserva.fecha == fecha and reserva.activa:
-                return f"El usuario {nombre_usuario} ya tiene una reserva activa."
-        
+        nombre_usuario = self.usuarios[documento].nombre
+
         if horario_deseado not in self.horarios_disponibles:
             agenda_formateada = " | ".join(self.horarios_disponibles)
             return (f"El horario '{horario_deseado}' no existe.\n"
                     f"Horarios disponibles: {agenda_formateada}\n"
                     f"Tiempo máximo permitido por sesión: {self.tiempo_maximo}.")
-            
+
+        for reserva in self.reservas:
+            if reserva.documento == documento and reserva.fecha == fecha and reserva.activa:
+                return f"El usuario {nombre_usuario} ya tiene una reserva activa."
+
         nueva_reserva = Reserva(documento, nombre_usuario, horario_deseado, fecha)
         self.reservas.append(nueva_reserva)
         
@@ -100,12 +99,7 @@ class Gym:
     
     def registrar_visita(self, documento: str, horario: str,  duracion: int, equipos: list[str]) -> str:
 # Registra una visita indicando horario, duración y equipos utilizados.
-        usuario_encontrado = False 
-        for u in self.usuarios: 
-            if u.documento == documento: 
-                usuario_encontrado = True 
-                break
-        if not usuario_encontrado:
+        if documento not in self.usuarios:
             return "El usuario no está registrado."
     
         registro = {"documento": documento, "horario": horario,"duracion": duracion, "equipos": equipos}
@@ -138,30 +132,26 @@ class Gym:
                 horario_frecuente = horario
     
         return f"El horario más frecuente es {horario_frecuente}."
-    
+
+
     def programa_mas_frecuente(self) -> str:
-# Determina el programa académico con más usuarios registrados.    
         if not self.usuarios:
             return "No hay usuarios registrados."
-    
-        conteo = {}
 
-        for usuario in self.usuarios:
+        conteo = {}
+        for usuario in self.usuarios.values():
             programa = usuario.programa
-    
             if programa in conteo:
                 conteo[programa] += 1
             else:
                 conteo[programa] = 1
-    
         programa_frecuente = ""
         mayor = 0
-    
         for programa in conteo:
             if conteo[programa] > mayor:
                 mayor = conteo[programa]
                 programa_frecuente = programa
-        
+
         return f"La carrera más frecuente es {programa_frecuente}."
         
 # Ejecuta ejemplos del sistema cuando el archivo se ejecuta directamente.

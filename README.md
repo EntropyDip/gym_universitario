@@ -24,3 +24,11 @@ El proyecto modela el mundo de un gimnasio a través de tres entidades principal
 | `Reserva.confirmar` | Reactiva una reserva previamente cancelada. |
 | `Reserva.coincide_con` | Verifica si una reserva pertenece a un documento dado. |
 | `Reserva.mostrar_resumen` | Genera un resumen textual del estado de la reserva. |
+
+## Restricciones
+
+- No se permiten **documentos duplicados** al registrar un usuario.
+- Un usuario solo puede tener **una reserva activa por fecha**.
+- El horario solicitado debe pertenecer a la lista de `horarios_disponibles` del gimnasio.
+- Las visitas y reservas solo pueden registrarse a nombre de usuarios **ya registrados**.
+- Cancelar/confirmar una reserva no tiene efecto si ya se encuentra en ese estado (evita transiciones redundantes).

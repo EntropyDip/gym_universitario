@@ -94,7 +94,8 @@ class Visita:
         if self.duracion <= 0:
             raise ValueError("La duración debe ser un número positivo de minutos")
         self.equipos = list(self.equipos)
-
+        
+@dataclass
 class Prioridad:
     # Representa un cupo apartado con prioridad para un usuario en un horario y fecha.
     documento: str
@@ -142,7 +143,7 @@ class Gym:
                 resultado.append(elemento)
         return resultado
         
-    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str) -> str:
+    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str, hora_actual: datetime) -> str:
     # Reserva un horario validando
     # documento, fecha, horario y el respeto a las prioridades ya otorgadas.   
         if documento not in self.usuarios:
@@ -150,7 +151,8 @@ class Gym:
 
         if not es_fecha_valida(fecha):
             return "Error: La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15."
-            
+        
+        self._liberar_prioridades_vencidas(hora_actual)   
         nombre_usuario = self.usuarios[documento].nombre
 
         if horario_deseado not in self.horarios_disponibles:
@@ -181,10 +183,12 @@ class Gym:
         if documento not in self.usuarios:
             return "El usuario no está registrado."
     
-        registro = {"documento": documento, "horario": horario,"duracion": duracion, "equipos": equipos}
-    
+        if horario not in self.horarios_disponibles:
+            return (f"Error: El horario '{horario}' no existe. "
+                    f"Disponibles: {' | '.join(self.horarios_disponibles)}.")
+
+        registro = Visita(documento, horario, duracion, equipos)
         self.registros.append(registro)
-    
         return "Visita registrada correctamente."
     
     def horario_mas_frecuente(self) -> str:
@@ -195,7 +199,7 @@ class Gym:
         conteo = {}
 
         for registro in self.registros:
-            horario = registro["horario"]
+            horario = registro.horario
     
             if horario in conteo:
                 conteo[horario] += 1
@@ -242,8 +246,8 @@ class Gym:
         cantidad_por_usuario = {}
 
         for registro in self.registros:
-            doc = registro["documento"]
-            duracion = registro["duracion"]
+            doc = registro.documento
+            duracion = registro.duracion
 
             if doc not in suma_por_usuario:
                 suma_por_usuario[doc] = 0
@@ -258,7 +262,7 @@ class Gym:
             promedio = suma_por_usuario[doc] / cantidad_por_usuario[doc]
 
             nombre = doc
-            for u in self.usuarios:
+            for u in self.usuarios.values():
                 if u.documento == doc:
                     nombre = u.nombre
                     break
@@ -267,34 +271,24 @@ class Gym:
 
         return resultado
 
-    def prioridad_membresia(self, documento: str, horario: str, fecha: str) -> str:
+    def prioridad_membresia(self, documento: str, horario: str, fecha: str, hora_actual: datetime) -> str:
 # Da prioridad exclusiva a un usuario para reservar un horario, si es "habitual" ahí
 # (ha ido varias veces a esa misma hora) o si tiene más tiempo acumulado en el gimnasio
 # que los demás usuarios.
         if documento not in self.usuarios:
             return "El usuario no está registrado."
 
-        # NUEVO: antes se podía pedir prioridad para un horario que no existe.
         if horario not in self.horarios_disponibles:
             return (f"Error: El horario '{horario}' no existe. "
                     f"Disponibles: {' | '.join(self.horarios_disponibles)}.")
 
-        # NUEVO: valida la fecha (antes cualquier texto pasaba como fecha).
         if not es_fecha_valida(fecha):
             return "Error: La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15."
 
-        # CAMBIADO: antes se recorría self.usuarios con un bucle para hallar al usuario;
-        # el diccionario ya está indexado por documento.
         usuario = self.usuarios[documento]
 
-        # NUEVO: primero se liberan las prioridades sin confirmar que ya vencieron.
-        # Antes un cupo vencido quedaba bloqueado para siempre si nadie llamaba
-        # a confirmar_prioridad().
         self._liberar_prioridades_vencidas(hora_actual)
-
-        # CAMBIADO: antes solo bloqueaba si el documento era distinto, y el mismo
-        # usuario podía crear prioridades duplicadas. Ahora se bloquea cualquier
-        # prioridad existente en ese horario y fecha (propia o ajena).
+        
         for prioridad in self.prioridades:
             if prioridad.horario == horario and prioridad.fecha == fecha:
                 if prioridad.documento == documento:
@@ -302,18 +296,12 @@ class Gym:
                 return (f"El horario {horario} del {fecha} ya está apartado "
                         f"con prioridad por {prioridad.nombre}.")
 
-        # ¿Es habitual en ese horario? (va seguido a esa misma hora)
-        # CAMBIADO: el 3 fijo se reemplazó por la variable min_visitas_habitual.
         veces_en_ese_horario = 0
         for visita in self.registros:
             if visita.documento == documento and visita.horario == horario:
                 veces_en_ese_horario += 1
         es_habitual = veces_en_ese_horario >= min_visitas_habitual
 
-        # ¿Tiene más tiempo acumulado en el gym que todos los demás?
-        # CAMBIADO: antes se recorrían TODOS los registros POR CADA usuario
-        # (muy lento con muchos datos). Ahora se calcula el tiempo de todos
-        # en una sola pasada y se compara contra el del usuario.
         tiempo_por_usuario = {}
         for visita in self.registros:
             doc = visita.documento
@@ -324,9 +312,6 @@ class Gym:
         # .get(clave, 0) devuelve 0 si el usuario no tiene visitas registradas.
         tiempo_usuario = tiempo_por_usuario.get(documento, 0)
 
-        # CAMBIADO: antes, si nadie tenía visitas, todos quedaban con tiempo 0 y
-        # un usuario sin historial ganaba prioridad "por tiempo". Ahora exige
-        # tener algo de tiempo registrado.
         tiene_mas_tiempo = tiempo_usuario > 0
         for doc in tiempo_por_usuario:
             if doc != documento and tiempo_por_usuario[doc] > tiempo_usuario:
@@ -354,7 +339,7 @@ class Gym:
                     return (f"{prioridad.nombre} ya había confirmado el cupo "
                             f"de las {horario} del {fecha}.")
                 hora_del_horario = datetime.strptime(f"{fecha} {horario}", "%Y-%m-%d %I:%M %p")
-        l       limite_para_confirmar = hora_del_horario - timedelta(hours=horas_limite_confirmacion)
+                limite_para_confirmar = hora_del_horario - timedelta(hours=horas_limite_confirmacion)
 
                 if hora_actual > limite_para_confirmar:
                             self.prioridades.remove(prioridad)

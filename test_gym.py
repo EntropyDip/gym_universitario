@@ -1,8 +1,10 @@
 # -----------------------------------------------------------------
 # Pruebas manuales para el sistema del gimnasio.
-# Ajusta la línea de abajo si tu archivo no se llama "gym.py"
 # -----------------------------------------------------------------
+from datetime import datetime
 from proyecto_gym import Gym, Usuario, Reserva
+
+hora_actual = datetime(2025, 6, 10, 6, 0)  # hora fija para las pruebas de reserva/prioridad
 
 pruebas_totales = 0
 pruebas_ok = 0
@@ -30,7 +32,7 @@ gym = Gym("Gimnasio de Pruebas")
 verificar(
     "registrar usuario nuevo",
     gym.registrar_usuario("Ana Ruiz", "100", "Ingeniería de Sistemas"),
-    "Usuario Ana Ruiz registrado exitosamente."
+    "usuario Ana Ruiz registrado exitosamente."
 )
 
 verificar(
@@ -71,7 +73,7 @@ verificar(
 verificar(
     "eliminar usuario correctamente",
     gym.eliminar_usuario("Luis Pérez", "200"),
-    "el usuario identificado con 200 se eliminó correctamente"
+    "El usuario identificado con 200 se eliminó correctamente."
 )
 verificar(
     "el usuario ya no debe existir tras eliminarlo",
@@ -86,13 +88,13 @@ print("\n--- realizar_reserva ---")
 
 verificar(
     "reservar con documento no registrado",
-    gym.realizar_reserva("777", "08:00 AM", "2025-06-10"),
+    gym.realizar_reserva("777", "08:00 AM", "2025-06-10", hora_actual),
     "Error: El documento 777 no está registrado para hacer la reserva"
 )
 
 verificar(
     "reservar en un horario que no existe",
-    gym.realizar_reserva("100", "07:00 AM", "2025-06-10"),
+    gym.realizar_reserva("100", "07:00 AM", "2025-06-10", hora_actual),
     "El horario '07:00 AM' no existe.\n"
     "Horarios disponibles: 08:00 AM | 10:00 AM | 02:00 PM\n"
     "Tiempo máximo permitido por sesión: 1:30 horas."
@@ -100,20 +102,20 @@ verificar(
 
 verificar(
     "reserva exitosa",
-    gym.realizar_reserva("100", "08:00 AM", "2025-06-10"),
+    gym.realizar_reserva("100", "08:00 AM", "2025-06-10", hora_actual),
     "¡Reserva exitosa! Ana Ruiz tiene su espacio a las 08:00 AM. "
     "el tiempo para estar haciendo uso del gym es: 1:30 horas."
 )
 
 verificar(
     "no debe poder reservar dos veces el mismo día",
-    gym.realizar_reserva("100", "10:00 AM", "2025-06-10"),
+    gym.realizar_reserva("100", "10:00 AM", "2025-06-10", hora_actual),
     "El usuario Ana Ruiz ya tiene una reserva activa."
 )
 
 verificar(
     "sí debe poder reservar otro día",
-    gym.realizar_reserva("100", "10:00 AM", "2025-06-11"),
+    gym.realizar_reserva("100", "10:00 AM", "2025-06-11", hora_actual),
     "¡Reserva exitosa! Ana Ruiz tiene su espacio a las 10:00 AM. "
     "el tiempo para estar haciendo uso del gym es: 1:30 horas."
 )
@@ -141,7 +143,6 @@ verificar(
     "Visita registrada correctamente."
 )
 
-# más visitas para poder probar horario_mas_frecuente
 gym.registrar_usuario("Marta Gil", "300", "Psicología")
 gym.registrar_visita("300", "08:00 AM", 45, ["bicicleta"])
 gym.registrar_visita("300", "10:00 AM", 30, ["pesas"])

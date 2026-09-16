@@ -263,6 +263,14 @@ class Gym:
 
         return "No se encontró una prioridad con esos datos."
 
+    def horario_disponible_para_reservar(self, horario: str, fecha: str, documento: str) -> bool:
+# consultar, ANTES de llamar a realizar_reserva, si el horario
+# está libre o si está apartado/confirmado por otro usuario con prioridad.
+        for p in self.prioridades:
+            if p["horario"] == horario and p["fecha"] == fecha and p["documento"] != documento:
+                return False
+
+        return True
 
 
 # Ejecuta ejemplos del sistema cuando el archivo se ejecuta directamente.

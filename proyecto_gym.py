@@ -95,6 +95,7 @@ class Visita:
             raise ValueError("La duración debe ser un número positivo de minutos")
         self.equipos = list(self.equipos)
 
+@dataclass
 class Prioridad:
     # Representa un cupo apartado con prioridad para un usuario en un horario y fecha.
     documento: str
@@ -119,10 +120,10 @@ class Gym:
     def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
     # Registra un nuevo usuario verificando que su documento no esté repetido.
         if documento in self.usuarios:
-            return f"El documento {documento} ya se encuentra registrado"
+            return f"el documento {documento} ya se encuentra registrado"
         nuevo_usuario = Usuario(nombre, documento, programa)
         self.usuarios[documento] = nuevo_usuario
-        return f"Usuario {nombre} registrado exitosamente."
+        return f"usuario {nombre} registrado exitosamente."
 
     def eliminar_usuario(self, nombre:str, documento:str) -> str:
     # Elimina un usuario del gimnasio usando su nombre y documento.
@@ -271,51 +272,42 @@ class Gym:
 # Da prioridad exclusiva a un usuario para reservar un horario, si es "habitual" ahí
 # (ha ido varias veces a esa misma hora) o si tiene más tiempo acumulado en el gimnasio
 # que los demás usuarios.
-        usuario = None
-        for u in self.usuarios:
-            if u.documento == documento:
-                usuario = u
-                break
-
+        usuario = self.usuarios.get(documento)
         if usuario is None:
             return "El usuario no está registrado."
-
-        # Si ya hay una prioridad de OTRO usuario en ese mismo horario y fecha, no se puede dar de nuevo.
         for p in self.prioridades:
-            if p["horario"] == horario and p["fecha"] == fecha and p["documento"] != documento:
-                return f"El horario {horario} del {fecha} ya está apartado con prioridad por {p['nombre']}."
+            # Si ya hay una prioridad de OTRO usuario en ese mismo horario y fecha, no se puede dar de nuevo.
+            if p.horario == horario and p.fecha == fecha and p.documento != documento:
+                return f"El horario {horario} del {fecha} ya está apartado con prioridad por {p.nombre}."
         # ¿Es habitual en ese horario? (va seguido a esa misma hora)
         veces_en_ese_horario = 0
         for registro in self.registros:
-            if registro["documento"] == documento and registro["horario"] == horario:
+            if registro.documento == documento and registro.horario == horario:
                 veces_en_ese_horario += 1
         es_habitual = veces_en_ese_horario >= 3
 
         # ¿Tiene más tiempo acumulado en el gym que todos los demás?
         tiempo_usuario = 0
         for registro in self.registros:
-            if registro["documento"] == documento:
-                tiempo_usuario += registro["duracion"]
+            if registro.documento == documento:
+                tiempo_usuario += registro.duracion
 
         tiene_mas_tiempo = True
-        for otro in self.usuarios:
+        for otro in self.usuarios.values():
             if otro.documento != documento:
                 tiempo_otro = 0
                 for registro in self.registros:
-                    if registro["documento"] == otro.documento:
-                        tiempo_otro += registro["duracion"]
+                    if registro.documento == otro.documento:
+                        tiempo_otro += registro.duracion
                 if tiempo_otro > tiempo_usuario:
                     tiene_mas_tiempo = False
         if not es_habitual and not tiene_mas_tiempo:
             return f"{usuario.nombre} no cumple los requisitos para tener prioridad en el horario {horario}."
 
-        self.prioridades.append({
-            "documento": documento,
-            "nombre": usuario.nombre,
-            "horario": horario,
-            "fecha": fecha,
-            "confirmada": False,
-        })
+
+        self.prioridades.append(Prioridad(
+            documento = documento, nombre = usuario.nombre, horario = horario, fecha = fecha, confirmada = False,
+))
 
         return (f"{usuario.nombre} obtuvo prioridad para el horario {horario} del {fecha}. "
                 f"Tiene hasta 2 horas antes para confirmar asistencia con confirmar_prioridad().")
@@ -329,13 +321,10 @@ class Gym:
         limite_para_confirmar = hora_del_horario - timedelta(hours=2)
 
         for p in self.prioridades:
-            if p["documento"] == documento and p["horario"] == horario and p["fecha"] == fecha:
+            if p.documento == documento and p.horario == horario and p.fecha == fecha:
                 if hora_actual > limite_para_confirmar:
                     self.prioridades.remove(p)
-                    return f"{p['nombre']} no confirmó a tiempo, el cupo de las {horario} del {fecha} queda libre."
-
-                p["confirmada"] = True
-                return f"{p['nombre']} confirmó su asistencia, el cupo de las {horario} del {fecha} es exclusivo."
-
-        return "No se encontró una prioridad con esos datos."
+                    return f"{p.nombre} no confirmó a tiempo, el cupo de las {horario} del {fecha} queda libre."
+        p.confirmada = True
+        return f"{p.nombre} confirmó su asistencia, el cupo de las {horario} del {fecha} es exclusivo."
 

@@ -143,9 +143,14 @@ class Gym:
         return resultado
         
     def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str) -> str:
+    # Reserva un horario validando
+    # documento, fecha, horario y el respeto a las prioridades ya otorgadas.   
         if documento not in self.usuarios:
             return f"Error: El documento {documento} no está registrado para hacer la reserva"
 
+        if not es_fecha_valida(fecha):
+            return "Error: La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15."
+            
         nombre_usuario = self.usuarios[documento].nombre
 
         if horario_deseado not in self.horarios_disponibles:
@@ -153,7 +158,15 @@ class Gym:
             return (f"El horario '{horario_deseado}' no existe.\n"
                     f"Horarios disponibles: {agenda_formateada}\n"
                     f"Tiempo máximo permitido por sesión: {self.tiempo_maximo}.")
-
+        
+        for prioridad in self.prioridades:
+            if prioridad.horario == horario_deseado and prioridad.fecha == fecha:
+                if prioridad.documento != documento:
+                    return (f"El horario {horario_deseado} del {fecha} está apartado "
+                            f"con prioridad para {prioridad.nombre}.")
+                return (f"{nombre_usuario} ya tiene este horario apartado con prioridad. "
+                        f"No es necesario hacer otra reserva.")
+                
         for reserva in self.reservas:
             if reserva.documento == documento and reserva.fecha == fecha and reserva.activa:
                 return f"El usuario {nombre_usuario} ya tiene una reserva activa."

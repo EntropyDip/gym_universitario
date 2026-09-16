@@ -4,19 +4,21 @@ Sistema en Python para administrar usuarios, reservas y visitas de un gimnasio u
 
 ## Descripción
 
-El proyecto modela el mundo de un gimnasio a través de tres entidades principales:
+El proyecto modela el mundo de un gimnasio a través de 5 entidades:
 
 - **`Usuario`**: representa a un estudiante inscrito en el gimnasio (nombre, documento y programa académico).
 - **`Reserva`**: representa el apartado de un horario por parte de un usuario, con su propio comportamiento (cancelar, confirmar, verificar propietario, mostrar resumen).
-- **`Gym`**: entidad central que administra la colección de usuarios y reservas, gestiona los horarios disponibles y lleva el registro de visitas.
+- **`Visita`**: registra que un usuario asistió al gimnasio en un horario dado, con la duración de la visita y los equipos usados.
+- **`Prioridad`**: representa un cupo apartado con prioridad para un usuario en un horario y fecha específicos, con estado de confirmación.
+- **`Gym`**: entidad central que administra la colección de usuarios, reservas, visitas y prioridades, y gestiona los horarios disponibles.
 
 ## Funcionalidades
 
 | Función | Descripción |
 |---|---|
 | `registrar_usuario` | Registra un nuevo usuario validando que el documento no esté duplicado. |
-| `eliminar_usuario` | Elimina un usuario existente por nombre y documento. |
-| `realizar_reserva` | Crea una reserva validando que el usuario exista, no tenga ya una reserva activa ese día, y que el horario solicitado sea válido. |
+| `eliminar_usuario` | Elimina un usuario existente por nombre y documento, junto con sus reservas, visitas y prioridades asociadas. |
+| `realizar_reserva` | Crea una reserva validando que el usuario exista, no tenga ya una reserva activa ese día, que el horario solicitado sea válido y que no esté apartado con prioridad por otro usuario. |
 | `registrar_visita` | Registra una visita (horario, duración y equipos usados) de un usuario ya registrado. |
 | `horario_mas_frecuente` | Calcula el horario con mayor cantidad de visitas registradas. |
 | `programa_mas_frecuente` | Calcula el programa académico con más usuarios registrados. |
@@ -35,6 +37,10 @@ El proyecto modela el mundo de un gimnasio a través de tres entidades principal
 - El horario solicitado debe pertenecer a la lista de `horarios_disponibles` del gimnasio.
 - Las visitas y reservas solo pueden registrarse a nombre de usuarios **ya registrados**.
 - Cancelar/confirmar una reserva no tiene efecto si ya se encuentra en ese estado (evita transiciones redundantes).
-- Los datos de creación de usuarios y reservas no pueden estar vacíos (el sistema levanta un `ValueError`).
+- Los datos de creación de usuarios, reservas y prioridades no pueden estar vacíos (el sistema levanta un `ValueError`).
 - Las fechas deben ingresarse en formato estricto `AAAA-MM-DD` y el sistema valida matemáticamente que existan en el calendario (incluyendo años bisiestos).
-- Los cupos de prioridad deben confirmarse con más de 2 horas de anticipación al horario apartado, o se perderá la exclusividad.
+- La prioridad sobre un horario se otorga si el usuario es "habitual" en ese horario (≥3 visitas registradas a esa hora, **sin importar la fecha en que ocurrieron esas visitas**) o si acumula estrictamente más minutos de uso que cualquier otro usuario; en caso de empate en el tiempo acumulado, ningún usuario obtiene prioridad por ese criterio.
+- Un horario con prioridad otorgada queda reservado exclusivamente para ese usuario: nadie más puede reservarlo ni pedir prioridad sobre él mientras la prioridad siga vigente.
+- Una prioridad no confirmada dentro de las 2 horas previas al horario se libera automáticamente, ya sea al intentar confirmarla, al intentar reservar ese horario, o al pedir una nueva prioridad.
+- Eliminar un usuario también elimina sus reservas, visitas y prioridades asociadas.
+

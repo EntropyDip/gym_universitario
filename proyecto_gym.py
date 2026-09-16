@@ -1,6 +1,35 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+min_visitas_habitual = 3
+horas_limite_confirmacion = 2
+
+def es_bisiesto(anio: int) -> bool:
+    return anio % 4 == 0 and (anio % 100 != 0 or anio % 400 == 0)
+
+def es_fecha_valida(fecha: str) -> bool:
+    partes = fecha.split("-")
+    if len(partes) != 3:
+        return False
+
+    anio_texto, mes_texto, dia_texto = partes
+    if not (anio_texto.isdigit() and mes_texto.isdigit() and dia_texto.isdigit()):
+        return False
+    if len(anio_texto) != 4 or len(mes_texto) != 2 or len(dia_texto) != 2:
+        return False
+
+    anio, mes, dia = int(anio_texto), int(mes_texto), int(dia_texto)
+    if not 1 <= mes <= 12:
+        return False
+
+    # Días que tiene cada mes (febrero se ajusta si el año es bisiesto).
+    dias_por_mes = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    maximo_dia = dias_por_mes[mes - 1]
+    if mes == 2 and not es_bisiesto(anio):
+        maximo_dia = 28
+
+    return 1 <= dia <= maximo_dia
+
 @dataclass
 class Usuario:
 # Representa a un usuario del gimnasio y guarda sus datos personales y académicos.
@@ -263,43 +292,3 @@ class Gym:
 
         return "No se encontró una prioridad con esos datos."
 
-    def horario_disponible_para_reservar(self, horario: str, fecha: str, documento: str) -> bool:
-# consultar, ANTES de llamar a realizar_reserva, si el horario
-# está libre o si está apartado/confirmado por otro usuario con prioridad.
-        for p in self.prioridades:
-            if p["horario"] == horario and p["fecha"] == fecha and p["documento"] != documento:
-                return False
-
-        return True
-
-
-# Ejecuta ejemplos del sistema cuando el archivo se ejecuta directamente.
-if __name__ == "__main__":
-    mi_gym = Gym("Gimnasio Universidad")
-
-    # Registro de los 3 estudiantes (todos en Ingeniería de Sistemas)
-    print(mi_gym.registrar_usuario("Juan Jose Aguirre", "1001", "Ingeniería de Sistemas"))
-    print(mi_gym.registrar_usuario("Samuel Zapata", "1002", "Ingeniería de Sistemas"))
-    print(mi_gym.registrar_usuario("Angelina Negrette", "1003", "Ingeniería de Sistemas"))
-
-    # Usuarios adicionales de otros programas
-    print(mi_gym.registrar_usuario("Mariana Restrepo", "1004", "Administración de Empresas"))
-    print(mi_gym.registrar_usuario("Carlos Herrera", "1005", "Ingeniería Industrial"))
-    print(mi_gym.registrar_usuario("Laura Gómez", "1006", "Psicología"))
-    print(mi_gym.registrar_usuario("Andrés Torres", "1007", "Ingeniería Financiera"))
-    print("-" * 40)
-
-    # Intento con una hora incorrecta para ver la agenda disponible
-    print(mi_gym.realizar_reserva("1001", "07:00 AM", "2025-06-10"))
-    print("-" * 40)
-
-    # Reservas exitosas para varios usuarios
-    print(mi_gym.realizar_reserva("1001", "10:00 AM", "2025-06-10"))
-    print(mi_gym.realizar_reserva("1002", "08:00 AM", "2025-06-10"))
-    print(mi_gym.realizar_reserva("1003", "02:00 PM", "2025-06-10"))
-    print(mi_gym.realizar_reserva("1004", "08:00 AM", "2025-06-10"))
-    print(mi_gym.realizar_reserva("1005", "10:00 AM", "2025-06-10"))
-    print("-" * 40)
-
-    # Ver el programa más frecuente entre los usuarios registrados
-    print(mi_gym.programa_mas_frecuente())

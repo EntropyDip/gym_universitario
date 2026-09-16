@@ -89,6 +89,11 @@ class Visita:
     horario: str
     duracion: int
     equipos: list[str]
+    
+    def __post_init__(self):
+        if self.duracion <= 0:
+            raise ValueError("La duración debe ser un número positivo de minutos")
+        self.equipos = list(self.equipos)
 
 class Prioridad:
     # Representa un cupo apartado con prioridad para un usuario en un horario y fecha.
@@ -102,31 +107,41 @@ class Gym:
 # Gestiona usuarios, reservas, visitas y horarios del gimnasio.
     def __init__(self, nombre: str, tiempo_maximo: str = "1:30 horas") -> None:
 # Inicializa el gimnasio con su nombre, horarios, usuarios y registros.
-        self.name = nombre
+        self.nombre = nombre
         self.usuarios: dict[str, Usuario] = {}
         self.horarios_disponibles: list[str] = ["08:00 AM", "10:00 AM", "02:00 PM"]
         self.tiempo_maximo = tiempo_maximo
         self.reservas: list[Reserva] = []
-        self.registros: list[dict] = []
-        self.prioridades: list[dict] = []
+        self.registros: list[Visita] = []
+        self.prioridades: list[Prioridad] = []
 
 
     def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
     # Registra un nuevo usuario verificando que su documento no esté repetido.
         if documento in self.usuarios:
-            return f"el documento {documento} ya se encuentra registrado"
+            return f"El documento {documento} ya se encuentra registrado"
         nuevo_usuario = Usuario(nombre, documento, programa)
         self.usuarios[documento] = nuevo_usuario
         return f"Usuario {nombre} registrado exitosamente."
 
     def eliminar_usuario(self, nombre:str, documento:str) -> str:
     # Elimina un usuario del gimnasio usando su nombre y documento.
-        if documento in self.usuarios and self.usuarios[documento].nombre == nombre:
-            self.usuarios.pop(documento)
-            return f"el usuario identificado con {documento} se eliminó correctamente"
-        return "El usuario no está registrado"
+        if documento not in self.usuarios or self.usuarios[documento].nombre != nombre:
+            return "El usuario no está registrado"
 
+        self.usuarios.pop(documento)
+        self.reservas = self._quitar_por_documento(self.reservas, documento)
+        self.registros = self._quitar_por_documento(self.registros, documento)
+        self.prioridades = self._quitar_por_documento(self.prioridades, documento)
+        return f"El usuario identificado con {documento} se eliminó correctamente."
 
+    def _quitar_por_documento(self, lista: list, documento: str) -> list:
+        resultado = []
+        for elemento in lista:
+            if elemento.documento != documento:
+                resultado.append(elemento)
+        return resultado
+        
     def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str) -> str:
         if documento not in self.usuarios:
             return f"Error: El documento {documento} no está registrado para hacer la reserva"

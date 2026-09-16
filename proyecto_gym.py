@@ -41,7 +41,7 @@ class Usuario:
         if not self.nombre.strip():
             raise ValueError("El nombre no puede quedar vacío")
         if not self.documento.strip():
-            raise ValueError("El documento no puede estar vacio")
+            raise ValueError("El documento no puede estar vacío")
         if not self.programa.strip():
             raise ValueError("El programa académico no puede quedar vacío")
 @dataclass
@@ -55,7 +55,7 @@ class Reserva:
 
     def __post_init__(self):
         if not self.documento.strip():
-            raise ValueError("El documento no pued estar vacío")
+            raise ValueError("El documento no puede estar vacío")
         if not es_fecha_valida(self.fecha):
             raise ValueError("La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15")
 
@@ -103,7 +103,15 @@ class Prioridad:
     horario: str
     fecha: str
     confirmada: bool = False
-    
+
+    def __post_init__(self):
+        if not self.documento.strip():
+            raise ValueError("El documento no puede estar vacío")
+        if not self.nombre.strip():
+            raise ValueError("El nombre no puede quedar vacío")
+        if not es_fecha_valida(self.fecha):
+            raise ValueError("La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15")
+
 class Gym:
 # Gestiona usuarios, reservas, visitas y horarios del gimnasio.
     def __init__(self, nombre: str, tiempo_maximo: str = "1:30 horas") -> None:
@@ -314,7 +322,7 @@ class Gym:
 
         tiene_mas_tiempo = tiempo_usuario > 0
         for doc in tiempo_por_usuario:
-            if doc != documento and tiempo_por_usuario[doc] > tiempo_usuario:
+            if doc != documento and tiempo_por_usuario[doc] >= tiempo_usuario:
                 tiene_mas_tiempo = False
 
         if not es_habitual and not tiene_mas_tiempo:

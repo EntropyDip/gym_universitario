@@ -24,6 +24,9 @@ El proyecto modela el mundo de un gimnasio a través de tres entidades principal
 | `Reserva.confirmar` | Reactiva una reserva previamente cancelada. |
 | `Reserva.coincide_con` | Verifica si una reserva pertenece a un documento dado. |
 | `Reserva.mostrar_resumen` | Genera un resumen textual del estado de la reserva. |
+| `promedio_duracion_por_usuario` | Calcula para cada usuario el promedio de duración de sus visitas registradas. |
+| `prioridad_membresia` | Otorga prioridad a un usuario para reservar un horario si es "habitual" (≥3 visitas) o tiene mayor tiempo acumulado. |
+| `confirmar_prioridad` | Confirma una prioridad antes del límite de 2 horas; de lo contrario, el cupo se libera. |
 
 ## Restricciones
 
@@ -32,3 +35,6 @@ El proyecto modela el mundo de un gimnasio a través de tres entidades principal
 - El horario solicitado debe pertenecer a la lista de `horarios_disponibles` del gimnasio.
 - Las visitas y reservas solo pueden registrarse a nombre de usuarios **ya registrados**.
 - Cancelar/confirmar una reserva no tiene efecto si ya se encuentra en ese estado (evita transiciones redundantes).
+- Los datos de creación de usuarios y reservas no pueden estar vacíos (el sistema levanta un `ValueError`).
+- Las fechas deben ingresarse en formato estricto `AAAA-MM-DD` y el sistema valida matemáticamente que existan en el calendario (incluyendo años bisiestos).
+- Los cupos de prioridad deben confirmarse con más de 2 horas de anticipación al horario apartado, o se perderá la exclusividad.

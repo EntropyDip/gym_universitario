@@ -120,10 +120,10 @@ class Gym:
     def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
     # Registra un nuevo usuario verificando que su documento no esté repetido.
         if documento in self.usuarios:
-            return f"El documento {documento} ya se encuentra registrado"
+            return f"el documento {documento} ya se encuentra registrado"
         nuevo_usuario = Usuario(nombre, documento, programa)
         self.usuarios[documento] = nuevo_usuario
-        return f"Usuario {nombre} registrado exitosamente."
+        return f"usuario {nombre} registrado exitosamente."
 
     def eliminar_usuario(self, nombre:str, documento:str) -> str:
     # Elimina un usuario del gimnasio usando su nombre y documento.

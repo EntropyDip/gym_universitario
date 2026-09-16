@@ -13,6 +13,8 @@ class Usuario:
             raise ValueError("El nombre no puede quedar vacío")
         if not self.documento.strip():
             raise ValueError("El documento no puede estar vacio")
+        if not self.programa.strip():
+            raise ValueError("El programa académico no puede quedar vacío")
 @dataclass
 class Reserva:
 # Representa una reserva del gimnasio y almacena sus datos y estado.
@@ -25,7 +27,8 @@ class Reserva:
     def __post_init__(self):
         if not self.documento.strip():
             raise ValueError("El documento no pued estar vacío")
-
+        if not es_fecha_valida(self.fecha):
+            raise ValueError("La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15")
 
     def cancelar(self) -> str:
 # Cancela una reserva activa y actualiza su estado.        
@@ -50,6 +53,22 @@ class Reserva:
         estado = "activa" if self.activa else "cancelada"
         return f"Reserva ({estado}) — {self.nombre_usuario} ({self.documento}) a las {self.horario}"
 
+@dataclass
+class Visita:
+    # Representa una visita de un usuario al gimnasio: horario, duración y equipos usados.
+    documento: str
+    horario: str
+    duracion: int
+    equipos: list[str]
+
+class Prioridad:
+    # Representa un cupo apartado con prioridad para un usuario en un horario y fecha.
+    documento: str
+    nombre: str
+    horario: str
+    fecha: str
+    confirmada: bool = False
+    
 class Gym:
 # Gestiona usuarios, reservas, visitas y horarios del gimnasio.
     def __init__(self, nombre: str, tiempo_maximo: str = "1:30 horas") -> None:

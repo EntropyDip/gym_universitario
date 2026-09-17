@@ -138,7 +138,7 @@ class Gym:
         if documento not in self.usuarios or self.usuarios[documento].nombre != nombre:
             return "El usuario no está registrado"
 
-        self.usuarios.pop(documento)
+        self.usuarios.pop(documento) # CAMBIAR EL ESTADO DE LA RESERVA
         self.reservas = self._quitar_por_documento(self.reservas, documento)
         self.registros = self._quitar_por_documento(self.registros, documento)
         self.prioridades = self._quitar_por_documento(self.prioridades, documento)

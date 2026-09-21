@@ -58,6 +58,10 @@ class Reserva:
             raise ValueError("El documento no puede estar vacío")
         if not es_fecha_valida(self.fecha):
             raise ValueError("La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15")
+        if not self.nombre_usuario.strip():
+            raise ValueError("El nombre de usuario no puede estar vacío")
+        if not self.horario.strip():
+            raise ValueError("el horario no puede quedar vacio")
 
     def cancelar(self) -> str:
 # Cancela una reserva activa y actualiza su estado.        
@@ -94,7 +98,8 @@ class Visita:
         if self.duracion <= 0:
             raise ValueError("La duración debe ser un número positivo de minutos")
         self.equipos = list(self.equipos)
-        
+        if not self.documento.strip():
+            raise ValueError("El documento no puede estar vacio")
 @dataclass
 class Prioridad:
     # Representa un cupo apartado con prioridad para un usuario en un horario y fecha.
@@ -102,6 +107,7 @@ class Prioridad:
     nombre: str
     horario: str
     fecha: str
+    hora_solicitud: datetime
     confirmada: bool = False
 
     def __post_init__(self):
@@ -114,12 +120,12 @@ class Prioridad:
 
 class Gym:
 # Gestiona usuarios, reservas, visitas y horarios del gimnasio.
-    def __init__(self, nombre: str, tiempo_maximo: str = "1:30 horas") -> None:
+    def __init__(self, nombre: str, duracion_maxima_sesion: str = "1:30 horas") -> None:
 # Inicializa el gimnasio con su nombre, horarios, usuarios y registros.
         self.nombre = nombre
         self.usuarios: dict[str, Usuario] = {}
         self.horarios_disponibles: list[str] = ["08:00 AM", "10:00 AM", "02:00 PM"]
-        self.tiempo_maximo = tiempo_maximo
+        self.duracion_maxima_sesion = duracion_maxima_sesion
         self.reservas: list[Reserva] = []
         self.registros: list[Visita] = []
         self.prioridades: list[Prioridad] = []
@@ -153,9 +159,13 @@ class Gym:
         
     def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str, hora_actual: datetime) -> str:
     # Reserva un horario validando
-    # documento, fecha, horario y el respeto a las prioridades ya otorgadas.   
+    # documento, fecha, horario y el respeto a las prioridades ya otorgadas.
         if documento not in self.usuarios:
             return f"Error: El documento {documento} no está registrado para hacer la reserva"
+
+        if hora_actual is None:
+            hora_actual = datetime.row()
+
 
         if not es_fecha_valida(fecha):
             return "Error: La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15."
@@ -185,7 +195,32 @@ class Gym:
         self.reservas.append(nueva_reserva)
         
         return f"¡Reserva exitosa! {nombre_usuario} tiene su espacio a las {horario_deseado}. el tiempo para estar haciendo uso del gym es: {self.tiempo_maximo}."
-    
+
+    def calcelar_reserva(self, documento: str, horario: str, fecha:str) -> str:
+        for reserva in self.reservas:
+            if reserva.documento == documento and reserva.horario == horario and reserva.fecha == fecha:
+                return reserva.cancelar()
+        return f"no existe una reserva con esos datos"
+
+    def confirmar_reserva(self, documento: str, horario: str, fecha: str) -> str:
+
+        for reserva in self.reservas:
+            if reserva.documento == documento and reserva.horario == horario and reserva.fecha == fecha:
+                return reserva.confirmar()
+        return f"no se encontro una reserva con esos datos"
+
+    def verificar_propietario_reserva(self, documento: str) -> str:
+        for reserva in self.reservas:
+            if reserva.coincide_con(documento):
+                return "Si"
+        return "No"
+
+    def mostrar_resumen_reserva(self, documento: str) -> str:
+        for reserva in self.reservas:
+            if reserva.coincide_con(documento):
+                return reserva.mostrar_resumen()
+        return f"no hay reserva con el documento {documento}"
+
     def registrar_visita(self, documento: str, horario: str,  duracion: int, equipos: list[str]) -> str:
 # Registra una visita indicando horario, duración y equipos utilizados.
         if documento not in self.usuarios:
@@ -294,6 +329,7 @@ class Gym:
             return "Error: La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15."
 
         usuario = self.usuarios[documento]
+        self.prioridades.append(Prioridad(documento, usuario.nombre, horario, fecha, hora_actual))
 
         self._liberar_prioridades_vencidas(hora_actual)
         

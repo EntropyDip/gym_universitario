@@ -1,7 +1,5 @@
 # Historias de Usuario y Plan de Trabajo (Entrega 2) – Gimnasio universitario
 
-Oct 14, 2026 · @Samuel
-
 El trabajo se reparte en tres módulos de 18 puntos de esfuerzo cada uno (33,3 % por integrante), con ramas por historia de usuario, revisión cruzada de cada pull request y una sustentación preparada desde el primer día.
 
 **Proyecto:** Sistema de gestión de gimnasio universitario

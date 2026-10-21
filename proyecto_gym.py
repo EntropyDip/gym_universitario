@@ -1,3 +1,4 @@
+#ESTE ARCHIVO SERÁ ELIMINADO
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 

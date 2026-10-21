@@ -1,22 +1,4 @@
-from dataclasses import dataclass
 from excepciones import DatoVacioError, FechaInvalidaError
-
-# TODO: pendiente es_fecha_valida de Juan José
-
-@dataclass
-class Usuario:
-# Representa a un usuario del gimnasio y guarda sus datos personales y académicos.
-    nombre: str
-    documento: str
-    programa: str
-
-    def __post_init__(self):
-        if not self.nombre.strip():
-            raise DatoVacioError("El nombre no puede quedar vacío")
-        if not self.documento.strip():
-            raise DatoVacioError("El documento no puede estar vacío")
-        if not self.programa.strip():
-            raise DatoVacioError("El programa académico no puede quedar vacío")
 
 @dataclass
 class Reserva:
@@ -28,11 +10,41 @@ class Reserva:
     activa: bool = True
 
     def __post_init__(self):
-        if not self.documento.strip():
-            raise DatoVacioError("El documento no puede estar vacío")
+        self.documento = self.documento.strip()
+        self.nombre_usuario = self.nombre_usuario.strip()
+        self.horario = self.horario.strip()
+        self.fecha = self.fecha.strip()
+        if not self.documento:
+            raise DatoVacioError("El documento no puede estar vacío.")
+        if not self.nombre_usuario:
+            raise DatoVacioError("El nombre de usuario no puede estar vacío.")
+        if not self.horario:
+            raise DatoVacioError("El horario no puede quedar vacío.")
         if not es_fecha_valida(self.fecha):
-            raise FechaInvalidadError("La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15")
-        if not self.nombre_usuario.strip():
-            raise DatoVacioError("El nombre de usuario no puede estar vacío")
-        if not self.horario.strip():
-            raise DatoVacioError("el horario no puede quedar vacio")
+            raise FechaInvalidaError(
+                "La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15.")
+    def cancelar(self) -> str:
+        """Cancela la reserva si estaba activa; si ya estaba cancelada, solo lo informa."""
+        if not self.activa:
+            return f"La reserva de {self.nombre_usuario} ya estaba cancelada."
+        self.activa = False
+        return f"Reserva de {self.nombre_usuario} a las {self.horario} cancelada."
+ 
+    def confirmar(self) -> str:
+        """Reactiva la reserva si estaba cancelada; si ya estaba activa, solo lo informa."""
+        if self.activa:
+            return f"La reserva de {self.nombre_usuario} ya está activa."
+        self.activa = True
+        return (f"Reserva de {self.nombre_usuario} confirmada nuevamente "
+                f"para las {self.horario}.")
+ 
+    def coincide_con(self, documento: str) -> bool:
+        """Indica si la reserva pertenece al documento indicado."""
+        return self.documento == documento
+ 
+    def mostrar_resumen(self) -> str:
+        """Devuelve el resumen de la reserva: usuario, documento, fecha, horario y estado."""
+        estado = "activa" if self.activa else "cancelada"
+        return (f"Reserva ({estado}) — {self.nombre_usuario} ({self.documento}), "
+                f"{self.fecha}, {self.horario}.")
+            

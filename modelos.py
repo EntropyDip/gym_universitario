@@ -1,6 +1,6 @@
 """Entidades del gimnasio."""
 from dataclasses import dataclass
-from excepciones import DatoVacioError
+from excepciones import DatoVacioError, FechaInvalidaError
 
 @dataclass
 class Usuario:
@@ -20,7 +20,6 @@ class Usuario:
         if not self.programa:
             raise DatoVacioError("El programa académico no puede quedar vacío.")
             raise DatoVacioError("el horario no puede quedar vacio")
-from excepciones import DatoVacioError, FechaInvalidaError
 
 @dataclass
 class Reserva:

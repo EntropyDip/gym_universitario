@@ -36,7 +36,7 @@ class Usuario:
     nombre: str
     documento: str
     programa: str
-
+#cambiar el nombre a la clse usurio, para hacer el registro de la clas¡¡¡¡
     def __post_init__(self):
         if not self.nombre.strip():
             raise ValueError("El nombre no puede quedar vacío")

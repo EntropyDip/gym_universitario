@@ -1,43 +1,53 @@
+"""Excepciones de negocio del gimnasio.
+
+Toda regla violada lanza una excepción que hereda de GymError. La interfaz
+captura GymError y muestra el mensaje en un cuadro de diálogo.
+"""
+
+
 class GymError(Exception):
-    """Excepción base para todos los errores del gimnasio."""
-    pass
+    """Clase base de los errores de negocio del gimnasio."""
 
 
 class DatoVacioError(GymError):
-    """Se lanza cuando un campo obligatorio (nombre, documento, programa, horario) está vacío."""
-    pass
+    """Un campo obligatorio llegó vacío."""
 
 
 class FechaInvalidaError(GymError):
-    """Se lanza cuando una fecha no tiene el formato AAAA-MM-DD o no existe en el calendario."""
-    pass
+    """La fecha no tiene formato AAAA-MM-DD o no existe en el calendario."""
 
 
 class DuracionInvalidaError(GymError):
-    """Se lanza cuando la duración de una visita no es un número positivo de minutos."""
-    pass
+    """La duración de la visita no es un entero mayor que cero."""
 
 
 class UsuarioNoRegistradoError(GymError):
-    """Se lanza cuando se intenta operar con un documento que no está registrado."""
-    pass
+    """El documento no existe o el nombre no coincide con el registrado."""
 
 
 class UsuarioYaRegistradoError(GymError):
-    """Se lanza cuando se intenta registrar un documento que ya existe."""
-    pass
+    """Ya existe un usuario con ese documento."""
 
 
 class HorarioInvalidoError(GymError):
-    """Se lanza cuando el horario solicitado no está entre los disponibles."""
-    pass
+    """El horario no está en la lista de horarios disponibles."""
 
 
 class ReservaNoEncontradaError(GymError):
-    """Se lanza cuando no se encuentra una reserva con los datos dados."""
-    pass
+    """No existe una reserva con los datos indicados."""
 
 
 class PrioridadNoEncontradaError(GymError):
-    """Se lanza cuando no se encuentra una prioridad con los datos dados."""
-    pass
+    """No existe una prioridad con los datos indicados."""
+
+
+class ReservaDuplicadaError(GymError):
+    """El usuario ya tiene una reserva activa en esa fecha (o el cupo ya es suyo)."""
+
+
+class CupoApartadoError(GymError):
+    """El cupo está apartado con prioridad por otro usuario."""
+
+
+class PrioridadNoCumpleError(GymError):
+    """El usuario no cumple los requisitos para tener prioridad."""

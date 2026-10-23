@@ -1,11 +1,15 @@
 """Pruebas unitarias. Cada integrante escribe la clase de su módulo."""
 import unittest
+from datetime import datetime
 from types import SimpleNamespace
 
-from excepciones import DatoVacioError, UsuarioNoRegistradoError, UsuarioYaRegistradoError
+from excepciones import (DatoVacioError, UsuarioNoRegistradoError, UsuarioYaRegistradoError, CupoApartadoError, FechaInvalidaError, GymError,
+        HorarioInvalidoError, ReservaDuplicadaError, ReservaNoEncontradaError)
 from repositorios import UsuarioRepositorioMemoria
 from servicios import GymService
 
+AHORA = datetime(2025, 6, 1, 8, 0)
+FECHA = "2025-06-15"
 
 class RepoFalso:
     """Repositorio de prueba que guarda objetos y soporta eliminar_por_documento."""

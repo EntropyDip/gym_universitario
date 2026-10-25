@@ -198,4 +198,39 @@ class TestConsultasYDisponibilidad(unittest.TestCase):
         self.assertEqual(estados["02:00 PM"], "libre")
 
 
+class TestPrioridades(unittest.TestCase):
+    """Pruebas de HU-08: Sistema dinámico de prioridades y caducidad (R12, R13)."""
+
+    def setUp(self):
+        self.gym = crear_gym_prueba()
+        self.gym.registrar_usuario("Mariana", "1004", "Administración")
+        self.gym.registrar_usuario("Diego", "1005", "Sistemas")
+        self.fecha = "2026-11-20"
+        self.horario = "08:00 AM"
+        # 1 día antes a las 08:00 AM (tiempo de sobra antes de las 2 horas límite)
+        self.hora_solicitud = datetime(2026, 11, 19, 8, 0)
+
+    def test_prioridad_por_usuario_habitual(self):
+        # Mariana registra 3 visitas a las 08:00 AM
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+
+        msg = self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+        self.assertIn("obtuvo prioridad", msg)
+        self.assertEqual(len(self.gym.listar_prioridades()), 1)
+
+    def test_prioridad_rechazada_si_no_cumple(self):
+        # Solo 1 visita
+        self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+        self.gym.registrar_visita("1005", "10:00 AM", 60, ["Poleas"])
+
+        with self.assertRaises(PrioridadNoCumpleError):
+            self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+
+
+
+
+
+
+
 

@@ -111,3 +111,33 @@ class ReservaRepositorioMemoria(ReservaRepositorio):
 
 
 # ------------------------------------------------------------------ Repositorio de Prioridades (Angelina)
+
+
+
+class PrioridadRepositorio(ABC):
+    """Contrato abstracto para el almacenamiento de prioridades."""
+
+    @abstractmethod
+    def agregar(self, prioridad: Prioridad) -> None:
+        """Guarda una prioridad otorgada."""
+
+    @abstractmethod
+    def buscar(self, documento: str, horario: str, fecha: str) -> Prioridad | None:
+        """Busca una prioridad por documento, horario y fecha."""
+
+    @abstractmethod
+    def buscar_por_cupo(self, horario: str, fecha: str) -> Prioridad | None:
+        """Busca si un horario y fecha están apartados con prioridad."""
+
+    @abstractmethod
+    def listar(self) -> list[Prioridad]:
+        """Lista todas las prioridades registradas."""
+
+    @abstractmethod
+    def eliminar(self, prioridad: Prioridad) -> None:
+        """Elimina una prioridad específica."""
+
+    @abstractmethod
+    def eliminar_por_documento(self, documento: str) -> None:
+        """Elimina todas las prioridades pertenecientes al documento."""
+

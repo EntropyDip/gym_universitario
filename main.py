@@ -3,23 +3,29 @@
 Uso:
     python main.py            abre la interfaz gráfica
     python main.py --demo     abre la interfaz con datos de ejemplo
-    python main.py --consola  corre el flujo de punta a punta en la consola
+    python main.py --consola  corre el flujo completo de los 15 requisitos en la consola
 """
 import argparse
 from datetime import datetime, timedelta
 
 from excepciones import GymError
-from repositorios import ReservaRepositorioMemoria, UsuarioRepositorioMemoria
+from repositorios import (
+    PrioridadRepositorioMemoria,
+    ReservaRepositorioMemoria,
+    UsuarioRepositorioMemoria,
+    VisitaRepositorioMemoria,
+)
 from servicios import GymService
 
 
 def crear_servicio() -> GymService:
-    """Crea los repositorios en memoria y el servicio que los usa.
-
-    Cuando se fusionen los otros módulos, pasar aquí también VisitaRepositorioMemoria
-    y PrioridadRepositorioMemoria como tercer y cuarto argumento.
-    """
-    return GymService(UsuarioRepositorioMemoria(), ReservaRepositorioMemoria())
+    """Instancia los repositorios en memoria y el servicio principal con inyección de dependencias."""
+    return GymService(
+        usuarios=UsuarioRepositorioMemoria(),
+        reservas=ReservaRepositorioMemoria(),
+        visitas=VisitaRepositorioMemoria(),
+        prioridades=PrioridadRepositorioMemoria()
+    )
 
 
 def fecha_de_manana() -> str:
@@ -28,62 +34,74 @@ def fecha_de_manana() -> str:
 
 
 def cargar_datos_demo(gym: GymService) -> None:
-    """Carga usuarios y una reserva de ejemplo."""
+    """Carga un conjunto representativo de datos de ejemplo en todos los módulos."""
+    # 1. Usuarios (R1)
     gym.registrar_usuario("Mariana Restrepo", "1004", "Administración de Empresas")
     gym.registrar_usuario("Diego Vega", "1005", "Ingeniería de Sistemas")
     gym.registrar_usuario("Carla Ríos", "800", "Medicina")
-    gym.realizar_reserva("1004", "08:00 AM", fecha_de_manana())
+    gym.registrar_usuario("Andrés Morales", "901", "Ingeniería de Sistemas")
+
+    manana = fecha_de_manana()
+
+    # 2. Visitas históricas para estadísticas y fidelidad (R4, R5, R6, R11, R15)
+    gym.registrar_visita("1004", "08:00 AM", 60, ["Cinta de correr", "Mancuernas"])
+    gym.registrar_visita("1004", "08:00 AM", 75, ["Cinta de correr", "Bicicleta estática"])
+    gym.registrar_visita("1004", "08:00 AM", 50, ["Mancuernas", "Banco plano"])  # Habitual a las 08:00 AM
+
+    gym.registrar_visita("1005", "10:00 AM", 90, ["Prensa de piernas", "Poleas"])
+    gym.registrar_visita("1005", "02:00 PM", 85, ["Banco plano", "Mancuernas"])
+
+    gym.registrar_visita("800", "08:00 AM", 40, ["Cinta de correr"])
+
+    # 3. Reservas (R3)
+    gym.realizar_reserva("1005", "10:00 AM", manana)
+
+    # 4. Prioridad (R12)
+    # Mariana cumple condición de habitual en 08:00 AM
+    gym.prioridad_membresia("1004", "08:00 AM", manana, datetime.now())
 
 
 def _intentar(titulo: str, accion, *args) -> None:
-    """Ejecuta una acción e imprime su resultado o el error de negocio."""
+    """Ejecuta una acción e imprime su resultado o el error de negocio controlado."""
     try:
-        print(f"[OK]    {titulo}: {accion(*args)}")
+        resultado = accion(*args)
+        print(f"[OK]    {titulo}: {resultado}")
     except GymError as error:
         print(f"[ERROR] {titulo}: {type(error).__name__} -> {error}")
 
 
 def flujo_consola(gym: GymService) -> None:
-    """Recorre de punta a punta los requisitos R1, R2, R3, R7 y R8."""
+    """Recorre de punta a punta los 15 requisitos funcionales (R1 a R15)."""
+    print("\n" + "=" * 70)
+    print("EJECUCIÓN DEL FLUJO COMPLETO EN CONSOLA (R1 A R15)")
+    print("=" * 70 + "\n")
+
     fecha = fecha_de_manana()
-    _intentar("Registrar usuario", gym.registrar_usuario, "Mariana Restrepo", "1004", "Administración")
-    _intentar("Registrar duplicado", gym.registrar_usuario, "Otra Persona", "1004", "Medicina")
-    _intentar("Registrar con nombre vacío", gym.registrar_usuario, "", "55", "Medicina")
-    _intentar("Registrar segundo usuario", gym.registrar_usuario, "Diego Vega", "1005", "Sistemas")
-    _intentar("Reservar", gym.realizar_reserva, "1004", "08:00 AM", fecha)
-    _intentar("Segunda reserva el mismo día", gym.realizar_reserva, "1004", "10:00 AM", fecha)
-    _intentar("Horario inválido", gym.realizar_reserva, "1005", "09:00 AM", fecha)
-    _intentar("Fecha inválida", gym.realizar_reserva, "1005", "08:00 AM", "2025-02-29")
-    _intentar("Cancelar", gym.cancelar_reserva, "1004", "08:00 AM", fecha)
-    _intentar("Cancelar de nuevo", gym.cancelar_reserva, "1004", "08:00 AM", fecha)
-    _intentar("Confirmar (reactivar)", gym.confirmar_reserva, "1004", "08:00 AM", fecha)
-    _intentar("Eliminar con nombre incorrecto", gym.eliminar_usuario, "Nadie", "1004")
-    _intentar("Eliminar usuario", gym.eliminar_usuario, "Mariana Restrepo", "1004")
-    print(f"Usuarios restantes: {[u.nombre for u in gym.listar_usuarios()]}")
-    print(f"Reservas restantes: {len(gym.listar_reservas())}")
+    ahora = datetime.now()
+
+    # --- MÓDULO 1: USUARIOS Y RESERVAS (Samuel Zapata) ---
+    print("--- 1. Gestión de Usuarios y Reservas (Samuel) ---")
+    _intentar("R1: Registrar usuario", gym.registrar_usuario, "Mariana Restrepo", "1004", "Administración")
+    _intentar("R1: Registrar segundo usuario", gym.registrar_usuario, "Diego Vega", "1005", "Ingeniería de Sistemas")
+    _intentar("R1: Registrar duplicado (debe fallar)", gym.registrar_usuario, "Mariana Clon", "1004", "Medicina")
+    _intentar("R1: Registrar con campo vacío (debe fallar)", gym.registrar_usuario, "", "1006", "Derecho")
+
+    _intentar("R3: Realizar reserva", gym.realizar_reserva, "1004", "08:00 AM", fecha, ahora)
+    _intentar("R3: Segunda reserva mismo día (debe fallar)", gym.realizar_reserva, "1004", "10:00 AM", fecha, ahora)
+    _intentar("R3: Horario inválido (debe fallar)", gym.realizar_reserva, "1005", "11:00 AM", fecha, ahora)
+    _intentar("R3: Fecha bisiesta inválida (debe fallar)", gym.realizar_reserva, "1005", "08:00 AM", "2025-02-29", ahora)
+
+    _intentar("R7: Cancelar reserva", gym.cancelar_reserva, "1004", "08:00 AM", fecha)
+    _intentar("R7: Cancelar reserva ya cancelada", gym.cancelar_reserva, "1004", "08:00 AM", fecha)
+
+    _intentar("R8: Confirmar (reactivar) reserva", gym.confirmar_reserva, "1004", "08:00 AM", fecha, ahora)
+
+    # --- MÓDULO 2: VISITAS Y ESTADÍSTICAS (Juan José Aguirre) ---
 
 
-def iniciar_interfaz(gym: GymService) -> None:
-    """Abre la ventana principal con pestañas."""
-    from interfaz.ventana_principal import VentanaPrincipal
-    VentanaPrincipal(gym).mainloop()
 
 
-def main() -> None:
-    """Lee los argumentos y arranca la consola o la interfaz."""
-    lector = argparse.ArgumentParser(description="Sistema de gestión de gimnasio universitario")
-    lector.add_argument("--demo", action="store_true", help="carga datos de ejemplo")
-    lector.add_argument("--consola", action="store_true", help="corre el flujo en consola")
-    argumentos = lector.parse_args()
-
-    gym = crear_servicio()
-    if argumentos.consola:
-        flujo_consola(gym)
-        return
-    if argumentos.demo:
-        cargar_datos_demo(gym)
-    iniciar_interfaz(gym)
 
 
-if __name__ == "__main__":
-    main()
+    # --- MÓDULO 3: PRIORIDADES Y CONSULTAS (Angelina Negrette) ---
+

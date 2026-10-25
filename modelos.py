@@ -112,7 +112,33 @@ class Reserva:
 
 # ------------------------------------------------------------------ Entidad Visita (Juan José)
 
+@dataclass
+class Visita:
+    """Registra la asistencia efectiva de un usuario al gimnasio y los equipos utilizados."""
+    documento: str
+    horario: str
+    duracion: int
+    equipos: list[str]
 
+    def __post_init__(self) -> None:
+        self.documento = str(self.documento).strip()
+        self.horario = str(self.horario).strip()
+        if not self.documento:
+            raise DatoVacioError("El documento no puede estar vacío.")
+        if not self.horario:
+            raise DatoVacioError("El horario no puede quedar vacío.")
+
+        # Excluir booleanos (que en Python heredan de int) y validar entero positivo
+        if isinstance(self.duracion, bool) or not isinstance(self.duracion, int) or self.duracion <= 0:
+            raise DuracionInvalidaError("La duración debe ser un número entero positivo de minutos.")
+
+        # Limpiar equipos
+        equipos_limpios = []
+        for eq in self.equipos:
+            limpio = str(eq).strip()
+            if limpio:
+                equipos_limpios.append(limpio)
+        self.equipos = equipos_limpios
 
 
 

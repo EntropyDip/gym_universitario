@@ -300,3 +300,51 @@ class GymService:
         if self.prioridades is None:
             return []
         return self.prioridades.listar()
+
+   # =========================================================================
+    # MÉTODOS DE APOYO Y VALIDACIÓN INTERNA
+    # =========================================================================
+    def _exigir_usuario(self, documento: str) -> Usuario:
+        """Valida que el usuario exista en el repositorio o lanza excepción."""
+        usuario = self.usuarios.buscar(documento)
+        if usuario is None:
+            raise UsuarioNoRegistradoError(
+                f"El documento {documento} no está registrado.")
+        return usuario
+
+    def _validar_fecha(self, fecha: str) -> None:
+        """Valida matemáticamente el formato y existencia de la fecha."""
+        if not es_fecha_valida(fecha):
+            raise FechaInvalidaError(
+                "La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15.")
+
+    def _validar_horario(self, horario: str) -> None:
+        """Valida que el horario solicitado pertenezca a la agenda del gimnasio."""
+        if horario not in self.horarios_disponibles:
+            agenda = " | ".join(self.horarios_disponibles)
+            raise HorarioInvalidoError(
+                f"El horario '{horario}' no existe.\n"
+                f"Horarios disponibles: {agenda}\n"
+                f"Tiempo máximo permitido por sesión: {self.duracion_maxima_sesion}.")
+
+    def _prioridad_del_cupo(self, horario: str, fecha: str) -> Prioridad | None:
+        """Devuelve la prioridad vigente que aparta un cupo específico."""
+        if self.prioridades is None:
+            return None
+        return self.prioridades.buscar_por_cupo(horario, fecha)
+
+    def _exigir_sin_reserva_activa(self, documento: str, nombre: str, fecha: str) -> None:
+        """Verifica que un usuario no tenga más de una reserva activa en la misma fecha."""
+        for reserva in self.listar_reservas():
+            if reserva.documento == documento and reserva.fecha == fecha and reserva.activa:
+                raise ReservaDuplicadaError(
+                    f"El usuario {nombre} ya tiene una reserva activa el {fecha}.")
+
+    def _liberar_prioridades_vencidas(self, hora_actual: datetime) -> None:
+        """Elimina del sistema las prioridades sin confirmar que hayan superado el límite."""
+        if self.prioridades is None:
+            return
+        vencidas = [p for p in self.prioridades.listar() if p.esta_vencida(hora_actual)]
+        for p in vencidas:
+            self.prioridades.eliminar(p)
+

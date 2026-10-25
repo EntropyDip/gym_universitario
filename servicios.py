@@ -1,30 +1,48 @@
 """Reglas de negocio del gimnasio (GymService)."""
-from excepciones import UsuarioNoRegistradoError, UsuarioYaRegistradoError
-from modelos import Usuario
- 
- 
+from datetime import datetime, timedelta
+
+from excepciones import (
+    CupoApartadoError,
+    DuracionInvalidaError,
+    FechaInvalidaError,
+    HorarioInvalidoError,
+    PrioridadNoCumpleError,
+    PrioridadNoEncontradaError,
+    ReservaDuplicadaError,
+    ReservaNoEncontradaError,
+    UsuarioNoRegistradoError,
+    UsuarioYaRegistradoError,
+)
+from modelos import Prioridad, Reserva, Usuario, Visita, es_fecha_valida
+
+
 class GymService:
-    """Aplica las reglas del gimnasio; es el Gym del código.
- 
-    Recibe los repositorios por inyección. visitas y prioridades son opcionales
-    mientras los módulos de Juan José y Angelina no estén fusionados.
-    """
- 
+    """Orquestador de las reglas de negocio del gimnasio universitario."""
+
     def __init__(self, usuarios, reservas, visitas=None, prioridades=None,
                  nombre: str = "Gimnasio universitario",
                  duracion_maxima_sesion: str = "1:30 horas") -> None:
-        """Crea el servicio con sus repositorios y la configuración del gimnasio."""
+        """Inicializa el servicio inyectando los repositorios correspondientes."""
         self.nombre = nombre
-        self.horarios_disponibles: list[str] = ["08:00 AM", "10:00 AM", "02:00 PM"]
+        self.horarios_disponibles: list[str] = [
+            "08:00 AM", "10:00 AM", "12:00 PM", "02:00 PM", "04:00 PM", "06:00 PM", "08:00 PM"
+        ]
         self.duracion_maxima_sesion = duracion_maxima_sesion
+        self.min_visitas_habitual: int = 3
+        self.horas_limite_confirmacion: int = 2
+
         self.usuarios = usuarios
         self.reservas = reservas
         self.visitas = visitas
         self.prioridades = prioridades
-                  
+
+    # =========================================================================
+    # MÓDULO 1: USUARIOS Y RESERVAS (Samuel Zapata Trujillo - R1, R2, R3, R7, R8)
+    # =========================================================================
+
     def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
-        """Registra un usuario nuevo (R1). Lanza DatoVacioError o UsuarioYaRegistradoError."""
-        usuario = Usuario(nombre, documento, programa)  # valida y quita espacios
+        """Registra un nuevo usuario validando que el documento sea único (R1)."""
+        usuario = Usuario(nombre, documento, programa)
         if self.usuarios.buscar(usuario.documento) is not None:
             raise UsuarioYaRegistradoError(
                 f"El documento {usuario.documento} ya se encuentra registrado.")
@@ -32,44 +50,40 @@ class GymService:
         return f"Usuario {usuario.nombre} registrado exitosamente."
 
     def eliminar_usuario(self, nombre: str, documento: str) -> str:
-        """Elimina un usuario con sus reservas, visitas y prioridades (R2)."""
-        nombre, documento = nombre.strip(), documento.strip()
-        usuario = self.usuarios.buscar(documento)
-        if usuario is None or usuario.nombre != nombre:
+        """Elimina un usuario y realiza la eliminación en cascada de sus datos asociados (R2)."""
+        nombre_limpio = str(nombre).strip()
+        doc_limpio = str(documento).strip()
+        usuario = self.usuarios.buscar(doc_limpio)
+        if usuario is None or usuario.nombre != nombre_limpio:
             raise UsuarioNoRegistradoError("El usuario no está registrado.")
+
+        # Eliminación en cascada en todos los repositorios asociados
         for repositorio in (self.reservas, self.visitas, self.prioridades):
             if repositorio is not None:
-                repositorio.eliminar_por_documento(documento)
-        self.usuarios.eliminar_por_documento(documento)
-        return f"El usuario identificado con {documento} se eliminó correctamente."
+                repositorio.eliminar_por_documento(doc_limpio)
+
+        self.usuarios.eliminar_por_documento(doc_limpio)
+        return f"El usuario identificado con {doc_limpio} se eliminó correctamente."
 
     def listar_usuarios(self) -> list[Usuario]:
-        """Devuelve los usuarios registrados (para las tablas de la interfaz)."""
+        """Devuelve la lista de usuarios registrados."""
         return self.usuarios.listar()
-from datetime import datetime
 
-from excepciones import (CupoApartadoError, FechaInvalidaError, HorarioInvalidoError,
-                         ReservaDuplicadaError, ReservaNoEncontradaError,
-                         UsuarioNoRegistradoError, UsuarioYaRegistradoError)
-from modelos import Reserva, Usuario, es_fecha_valida
-
-    # ---------------------------------------------------------------- R3, R7, R8
     def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str,
                          hora_actual: datetime | None = None) -> str:
-        """Crea una reserva activa (R3).
-
-        Orden de validaciones: usuario, fecha, liberar prioridades vencidas,
-        horario, prioridad de otro, reserva activa.
-        """
-        documento = documento.strip()
-        usuario = self._exigir_usuario(documento)
+        """Crea una reserva activa aplicando todas las validaciones de negocio (R3)."""
+        doc_limpio = str(documento).strip()
+        usuario = self._exigir_usuario(doc_limpio)
         self._validar_fecha(fecha)
-        self._liberar_prioridades_vencidas(hora_actual or datetime.now())
+
+        ahora = hora_actual or datetime.now()
+        self._liberar_prioridades_vencidas(ahora)
         self._validar_horario(horario_deseado)
 
+        # Validar si el cupo está apartado con prioridad
         prioridad = self._prioridad_del_cupo(horario_deseado, fecha)
         if prioridad is not None:
-            if prioridad.documento != documento:
+            if prioridad.documento != doc_limpio:
                 raise CupoApartadoError(
                     f"El horario {horario_deseado} del {fecha} está apartado "
                     f"con prioridad para {prioridad.nombre}.")
@@ -77,91 +91,48 @@ from modelos import Reserva, Usuario, es_fecha_valida
                 f"{usuario.nombre} ya tiene este horario apartado con prioridad. "
                 f"No es necesario hacer otra reserva.")
 
-        self._exigir_sin_reserva_activa(documento, usuario.nombre, fecha)
+        # Validar que no tenga otra reserva activa en la misma fecha
+        self._exigir_sin_reserva_activa(doc_limpio, usuario.nombre, fecha)
 
-        self.reservas.agregar(Reserva(documento, usuario.nombre, horario_deseado, fecha))
+        nueva_reserva = Reserva(doc_limpio, usuario.nombre, horario_deseado, fecha)
+        self.reservas.agregar(nueva_reserva)
         return (f"¡Reserva exitosa! {usuario.nombre} tiene su espacio a las "
                 f"{horario_deseado}. El tiempo para estar haciendo uso del gym es: "
                 f"{self.duracion_maxima_sesion}.")
 
     def cancelar_reserva(self, documento: str, horario: str, fecha: str) -> str:
-        """Cancela una reserva (R7); si hay una activa y otra cancelada, actúa sobre la activa."""
-        documento = documento.strip()
-        reserva = (self.reservas.buscar(documento, horario, fecha, activa=True)
-                   or self.reservas.buscar(documento, horario, fecha))
+        """Cancela una reserva activa; si ya está cancelada lo notifica sin error (R7)."""
+        doc_limpio = str(documento).strip()
+        reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=True)
+                   or self.reservas.buscar(doc_limpio, horario, fecha))
         if reserva is None:
             raise ReservaNoEncontradaError("No existe una reserva con esos datos.")
         return reserva.cancelar()
 
     def confirmar_reserva(self, documento: str, horario: str, fecha: str,
                           hora_actual: datetime | None = None) -> str:
-        """Reactiva una reserva cancelada (R8) respetando RN3 y RN7."""
-        documento = documento.strip()
-        reserva = (self.reservas.buscar(documento, horario, fecha, activa=False)
-                   or self.reservas.buscar(documento, horario, fecha))
+        """Reactiva una reserva previamente cancelada (R8)."""
+        doc_limpio = str(documento).strip()
+        reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=False)
+                   or self.reservas.buscar(doc_limpio, horario, fecha))
         if reserva is None:
             raise ReservaNoEncontradaError("No se encontró una reserva con esos datos.")
         if reserva.activa:
-            return reserva.confirmar()  # solo informa que ya estaba activa
+            return reserva.confirmar()
 
-        self._liberar_prioridades_vencidas(hora_actual or datetime.now())
+        ahora = hora_actual or datetime.now()
+        self._liberar_prioridades_vencidas(ahora)
+
         prioridad = self._prioridad_del_cupo(horario, fecha)
-        if prioridad is not None and prioridad.documento != documento:
+        if prioridad is not None and prioridad.documento != doc_limpio:
             raise CupoApartadoError(
                 f"El horario {horario} del {fecha} está apartado "
                 f"con prioridad para {prioridad.nombre}.")
-        self._exigir_sin_reserva_activa(documento, reserva.nombre_usuario, fecha)
+
+        self._exigir_sin_reserva_activa(doc_limpio, reserva.nombre_usuario, fecha)
         return reserva.confirmar()
 
     def listar_reservas(self) -> list[Reserva]:
-        """Devuelve las reservas registradas (para las tablas de la interfaz)."""
+        """Devuelve la lista de reservas registradas."""
         return self.reservas.listar()
-
-
-# ------------------------------------------------------------------ apoyo
-    def _exigir_usuario(self, documento: str) -> Usuario:
-        """Devuelve el usuario o lanza UsuarioNoRegistradoError."""
-        usuario = self.usuarios.buscar(documento)
-        if usuario is None:
-            raise UsuarioNoRegistradoError(
-                f"El documento {documento} no está registrado para hacer la reserva.")
-        return usuario
-
-    def _validar_fecha(self, fecha: str) -> None:
-        """Lanza FechaInvalidaError si la fecha no es AAAA-MM-DD válida."""
-        if not es_fecha_valida(fecha):
-            raise FechaInvalidaError(
-                "La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15.")
-
-    def _validar_horario(self, horario: str) -> None:
-        """Lanza HorarioInvalidoError (con la lista de horarios) si el horario no existe."""
-        if horario not in self.horarios_disponibles:
-            raise HorarioInvalidoError(
-                f"El horario '{horario}' no existe.\n"
-                f"Horarios disponibles: {' | '.join(self.horarios_disponibles)}\n"
-                f"Tiempo máximo permitido por sesión: {self.duracion_maxima_sesion}.")
-
-    def _prioridad_del_cupo(self, horario: str, fecha: str):
-        """Devuelve la prioridad que aparta ese horario y fecha, o None."""
-        if self.prioridades is None:
-            return None
-        for prioridad in self.prioridades.listar():
-            if prioridad.horario == horario and prioridad.fecha == fecha:
-                return prioridad
-        return None
-
-    def _exigir_sin_reserva_activa(self, documento: str, nombre: str, fecha: str) -> None:
-        """Lanza ReservaDuplicadaError si el usuario ya tiene una reserva activa ese día."""
-        for reserva in self.reservas.listar():
-            if reserva.documento == documento and reserva.fecha == fecha and reserva.activa:
-                raise ReservaDuplicadaError(
-                    f"El usuario {nombre} ya tiene una reserva activa el {fecha}.")
-
-    def _liberar_prioridades_vencidas(self, hora_actual: datetime) -> None:
-        """Elimina las prioridades no confirmadas cuyo límite ya pasó.
-
-        Provisional: Angelina lo implementa en HU-08 (necesita Prioridad.esta_vencida).
-        """
-        if self.prioridades is None:
-            return
-
+ 

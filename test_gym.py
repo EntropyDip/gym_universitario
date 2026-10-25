@@ -157,6 +157,71 @@ class TestReservas(unittest.TestCase):
 # MÓDULO 2: VISITAS Y ESTADÍSTICAS (Juan José Aguirre - R4, R5, R6, R11, R15)
 # =========================================================================
 
+class TestVisitasYFechas(unittest.TestCase):
+    """Pruebas de HU-04: Registro de visitas y validación de calendario (R4)."""
+
+    def setUp(self):
+        self.gym = crear_gym_prueba()
+        self.gym.registrar_usuario("Mariana", "1004", "Administración")
+
+    def test_algoritmo_bisiestos(self):
+        self.assertTrue(es_bisiesto(2024))
+        self.assertFalse(es_bisiesto(2025))
+        self.assertFalse(es_bisiesto(1900))  # Múltiplo de 100 pero no de 400
+        self.assertTrue(es_bisiesto(2000))   # Múltiplo de 400
+
+    def test_validador_fechas(self):
+        self.assertTrue(es_fecha_valida("2024-02-29"))
+        self.assertFalse(es_fecha_valida("2025-02-29"))
+        self.assertFalse(es_fecha_valida("2025-13-01"))
+        self.assertFalse(es_fecha_valida("2025/06/15"))
+        self.assertFalse(es_fecha_valida("texto"))
+
+    def test_registrar_visita_exitoso(self):
+        msg = self.gym.registrar_visita("1004", "08:00 AM", 60, ["Mancuernas", "Cinta"])
+        self.assertIn("registrada correctamente", msg)
+        self.assertEqual(len(self.gym.listar_visitas()), 1)
+
+    def test_registrar_visita_duracion_invalida(self):
+        for dur in [0, -15, True, False, "sesenta"]:
+            with self.subTest(duracion=dur):
+                with self.assertRaises(DuracionInvalidaError):
+                    self.gym.registrar_visita("1004", "08:00 AM", dur, ["Mancuernas"])
+
+
+class TestEstadisticas(unittest.TestCase):
+    """Pruebas de HU-05: Estadísticas y métricas analíticas (R5, R6, R11, R15)."""
+
+    def setUp(self):
+        self.gym = crear_gym_prueba()
+        self.gym.registrar_usuario("Mariana", "1004", "Administración")
+        self.gym.registrar_usuario("Diego", "1005", "Sistemas")
+        self.gym.registrar_usuario("Carla", "1006", "Sistemas")
+
+    def test_estadisticas_sin_datos(self):
+        self.assertIn("No hay visitas registradas", self.gym.horario_mas_frecuente())
+        self.assertIn("No hay registros de uso", self.gym.equipo_mas_utilizado())
+        self.assertEqual(self.gym.datos_promedio_duracion(), [])
+
+    def test_programa_mas_frecuente(self):
+        self.assertIn("Sistemas", self.gym.programa_mas_frecuente())
+
+    def test_metricas_completas_visitas(self):
+        self.gym.registrar_visita("1004", "08:00 AM", 40, ["Mancuernas", "Cinta"])
+        self.gym.registrar_visita("1004", "08:00 AM", 60, ["Mancuernas"])
+        self.gym.registrar_visita("1005", "10:00 AM", 90, ["Cinta"])
+
+        # Horario más frecuente: 08:00 AM (2 visitas)
+        self.assertIn("08:00 AM", self.gym.horario_mas_frecuente())
+
+        # Promedio: Mariana tiene 40 + 60 = 100 / 2 = 50.0
+        datos = dict(self.gym.datos_promedio_duracion())
+        nombre_clave = [k for k in datos if "1004" in k][0]
+        self.assertEqual(datos[nombre_clave], 50.0)
+
+        # Ranking de equipos: Mancuernas (2 visitas), Cinta (2 visitas)
+        ranking = dict(self.gym.ranking_equipos())
+        self.assertEqual(ranking["Mancuernas"], 2)
 
 
 
@@ -228,7 +293,7 @@ class TestPrioridades(unittest.TestCase):
             self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
 
 
-  def test_cupo_con_prioridad_no_puede_ser_reservado_por_otro(self):
+    def test_cupo_con_prioridad_no_puede_ser_reservado_por_otro(self):
         for _ in range(3):
             self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
         self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
@@ -260,7 +325,7 @@ class TestPrioridades(unittest.TestCase):
         self.assertEqual(len(self.gym.listar_prioridades()), 0)
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     unittest.main()
 
 

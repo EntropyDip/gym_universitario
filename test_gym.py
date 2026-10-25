@@ -168,4 +168,34 @@ class TestReservas(unittest.TestCase):
 # =========================================================================
 
 
+class TestConsultasYDisponibilidad(unittest.TestCase):
+    """Pruebas de HU-07: Verificación de propietario, resumen y disponibilidad (R9, R10, R14)."""
+
+    def setUp(self):
+        self.gym = crear_gym_prueba()
+        self.gym.registrar_usuario("Mariana", "1004", "Administración")
+        self.fecha = "2026-11-15"
+
+    def test_verificar_propietario(self):
+        self.assertEqual(self.gym.verificar_propietario_reserva("1004"), "No")
+        self.gym.realizar_reserva("1004", "08:00 AM", self.fecha)
+        self.assertEqual(self.gym.verificar_propietario_reserva("1004"), "Sí")
+
+    def test_mostrar_resumen_reserva(self):
+        with self.assertRaises(ReservaNoEncontradaError):
+            self.gym.mostrar_resumen_reserva("1004")
+        self.gym.realizar_reserva("1004", "08:00 AM", self.fecha)
+        resumen = self.gym.mostrar_resumen_reserva("1004")
+        self.assertIn("Mariana", resumen)
+        self.assertIn("08:00 AM", resumen)
+
+    def test_consultar_disponibilidad(self):
+        self.gym.realizar_reserva("1004", "08:00 AM", self.fecha)
+        disp = self.gym.consultar_disponibilidad(self.fecha)
+        estados = {horario: estado for horario, estado, _ in disp}
+        self.assertEqual(estados["08:00 AM"], "reservado")
+        self.assertEqual(estados["10:00 AM"], "libre")
+        self.assertEqual(estados["02:00 PM"], "libre")
+
+
 

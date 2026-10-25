@@ -137,6 +137,40 @@ class PrioridadRepositorio(ABC):
     def eliminar(self, prioridad: Prioridad) -> None:
         """Elimina una prioridad específica."""
 
+
+class PrioridadRepositorioMemoria(PrioridadRepositorio):
+    """Implementación en memoria del repositorio de prioridades."""
+
+    def _init_(self) -> None:
+        self._prioridades: list[Prioridad] = []
+
+    def agregar(self, prioridad: Prioridad) -> None:
+        self._prioridades.append(prioridad)
+
+    def buscar(self, documento: str, horario: str, fecha: str) -> Prioridad | None:
+        doc = documento.strip()
+        for p in self._prioridades:
+            if p.documento == doc and p.horario == horario and p.fecha == fecha:
+                return p
+        return None
+
+    def buscar_por_cupo(self, horario: str, fecha: str) -> Prioridad | None:
+        for p in self._prioridades:
+            if p.horario == horario and p.fecha == fecha:
+                return p
+        return None
+
+    def listar(self) -> list[Prioridad]:
+        return list(self._prioridades)
+
+    def eliminar(self, prioridad: Prioridad) -> None:
+        if prioridad in self._prioridades:
+            self._prioridades.remove(prioridad)
+
+    def eliminar_por_documento(self, documento: str) -> None:
+        doc = documento.strip()
+        self._prioridades = [p for p in self._prioridades if p.documento != doc]
+
     @abstractmethod
     def eliminar_por_documento(self, documento: str) -> None:
         """Elimina todas las prioridades pertenecientes al documento."""

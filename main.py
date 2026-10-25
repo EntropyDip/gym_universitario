@@ -139,7 +139,7 @@ def flujo_consola(gym: GymService) -> None:
 
 def iniciar_interfaz(gym: GymService) -> None:
     """Abre la ventana principal con pestañas de navegación."""
-    from interfaz.ventana_principal import VentanaPrincipal
+    from interfaz import VentanaPrincipal
     app = VentanaPrincipal(gym)
     app.mainloop()
 
@@ -162,6 +162,6 @@ def main() -> None:
     iniciar_interfaz(gym)
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
 

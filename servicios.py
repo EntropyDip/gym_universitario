@@ -20,8 +20,8 @@ class GymService:
     """Orquestador de las reglas de negocio del gimnasio universitario."""
 
     def __init__(self, usuarios, reservas, visitas=None, prioridades=None,
-                 nombre: str = "Gimnasio universitario",
-                 duracion_maxima_sesion: str = "1:30 horas") -> None:
+                nombre: str = "Gimnasio universitario",
+                duracion_maxima_sesion: str = "1:30 horas") -> None:
         """Inicializa el servicio inyectando los repositorios correspondientes."""
         self.nombre = nombre
         self.horarios_disponibles: list[str] = [
@@ -35,10 +35,6 @@ class GymService:
         self.reservas = reservas
         self.visitas = visitas
         self.prioridades = prioridades
-
-    # =========================================================================
-    # MÓDULO 1: USUARIOS Y RESERVAS (Samuel Zapata Trujillo - R1, R2, R3, R7, R8)
-    # =========================================================================
 
     def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
         """Registra un nuevo usuario validando que el documento sea único (R1)."""
@@ -69,8 +65,7 @@ class GymService:
         """Devuelve la lista de usuarios registrados."""
         return self.usuarios.listar()
 
-    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str,
-                         hora_actual: datetime | None = None) -> str:
+    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str,hora_actual: datetime | None = None) -> str:
         """Crea una reserva activa aplicando todas las validaciones de negocio (R3)."""
         doc_limpio = str(documento).strip()
         usuario = self._exigir_usuario(doc_limpio)
@@ -103,18 +98,15 @@ class GymService:
     def cancelar_reserva(self, documento: str, horario: str, fecha: str) -> str:
         """Cancela una reserva activa; si ya está cancelada lo notifica sin error (R7)."""
         doc_limpio = str(documento).strip()
-        reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=True)
-                   or self.reservas.buscar(doc_limpio, horario, fecha))
+        reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=True) or self.reservas.buscar(doc_limpio, horario, fecha))
         if reserva is None:
             raise ReservaNoEncontradaError("No existe una reserva con esos datos.")
         return reserva.cancelar()
 
-    def confirmar_reserva(self, documento: str, horario: str, fecha: str,
-                          hora_actual: datetime | None = None) -> str:
+    def confirmar_reserva(self, documento: str, horario: str, fecha: str,hora_actual: datetime | None = None) -> str:
         """Reactiva una reserva previamente cancelada (R8)."""
         doc_limpio = str(documento).strip()
-        reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=False)
-                   or self.reservas.buscar(doc_limpio, horario, fecha))
+        reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=False)or self.reservas.buscar(doc_limpio, horario, fecha))
         if reserva is None:
             raise ReservaNoEncontradaError("No se encontró una reserva con esos datos.")
         if reserva.activa:
@@ -135,28 +127,105 @@ class GymService:
     def listar_reservas(self) -> list[Reserva]:
         """Devuelve la lista de reservas registradas."""
         return self.reservas.listar()
- 
-    # =========================================================================
-    # MÓDULO 2: VISITAS Y ESTADÍSTICAS (Juan José Aguirre - R4, R5, R6, R11, R15)
-    # =========================================================================
 
+    def registrar_visita(self, documento: str, horario: str, duracion: int,equipos: list[str]) -> str:
+        """Registra la asistencia de un usuario con los equipos usados (R4)."""
+        doc_limpio = str(documento).strip()
+        usuario = self._exigir_usuario(doc_limpio)
+        self._validar_horario(horario)
 
+        nueva_visita = Visita(doc_limpio, horario, duracion, equipos)
+        if self.visitas is not None:
+            self.visitas.agregar(nueva_visita)
+        return f"Visita de {usuario.nombre} registrada correctamente."
 
+    def listar_visitas(self) -> list[Visita]:
+        """Devuelve la lista de visitas registradas."""
+        if self.visitas is None:
+            return []
+        return self.visitas.listar()
 
+    def horario_mas_frecuente(self) -> str:
+        """Calcula el horario con mayor afluencia de visitas registradas (R5)."""
+        visitas = self.listar_visitas()
+        if not visitas:
+            return "No hay visitas registradas."
 
+        conteo: dict[str, int] = {}
+        for v in visitas:
+            conteo[v.horario] = conteo.get(v.horario, 0) + 1
 
+        horario_top = max(conteo, key=conteo.get)
+        return f"El horario más frecuente es {horario_top}."
 
+    def programa_mas_frecuente(self) -> str:
+        """Calcula la carrera o programa con mayor cantidad de usuarios registrados (R6)."""
+        usuarios = self.listar_usuarios()
+        if not usuarios:
+            return "No hay usuarios registrados."
 
+        conteo: dict[str, int] = {}
+        for u in usuarios:
+            conteo[u.programa] = conteo.get(u.programa, 0) + 1
 
+        programa_top = max(conteo, key=conteo.get)
+        return f"La carrera más frecuente es {programa_top}."
 
+    def promedio_duracion_por_usuario(self) -> str:
+        """Genera un informe textual con el tiempo promedio en minutos por usuario (R11)."""
+        datos = self.datos_promedio_duracion()
+        if not datos:
+            return "No hay visitas registradas."
 
+        lineas = ["Promedio de duración por usuario:"]
+        for nombre, promedio in datos:
+            lineas.append(f"- {nombre}: {promedio:.1f} minutos en promedio")
+        return "\n".join(lineas)
 
+    def datos_promedio_duracion(self) -> list[tuple[str, float]]:
+        """Calcula los promedios numéricos de duración para alimentar gráficos y tablas."""
+        visitas = self.listar_visitas()
+        if not visitas:
+            return []
 
-    # =========================================================================
-    # MÓDULO 3: PRIORIDADES Y CONSULTAS (Angelina Negrette - R9, R10, R12, R13, R14)
-    # =========================================================================
+        suma: dict[str, int] = {}
+        conteo: dict[str, int] = {}
+        for v in visitas:
+            suma[v.documento] = suma.get(v.documento, 0) + v.duracion
+            conteo[v.documento] = conteo.get(v.documento, 0) + 1
+
+        resultados = []
+        for doc, total in suma.items():
+            promedio = round(total / conteo[doc], 1)
+            usuario = self.usuarios.buscar(doc)
+            nombre = f"{usuario.nombre} ({doc})" if usuario else doc
+            resultados.append((nombre, promedio))
+        return sorted(resultados, key=lambda x: x[1], reverse=True)
+
+    def equipo_mas_utilizado(self) -> str:
+        """Determina el equipo deportivo con mayor frecuencia de uso (R15)."""
+        ranking = self.ranking_equipos()
+        if not ranking:
+            return "No hay registros de uso de equipos."
+        top_equipo, usos = ranking[0]
+        return f"El equipo más utilizado es {top_equipo} con {usos} usos registrados."
+
+    def ranking_equipos(self) -> list[tuple[str, int]]:
+        """Calcula el ranking de equipos ordenado de mayor a menor frecuencia de uso."""
+        visitas = self.listar_visitas()
+        if not visitas:
+            return []
+
+        conteo: dict[str, int] = {}
+        for v in visitas:
+            # Cuenta una vez por visita cada equipo sin distinguir mayúsculas
+            vistos_en_visita = {eq.title() for eq in v.equipos if eq.strip()}
+            for eq in vistos_en_visita:
+                conteo[eq] = conteo.get(eq, 0) + 1
+
+        return sorted(conteo.items(), key=lambda x: x[1], reverse=True)
     
-     def verificar_propietario_reserva(self, documento: str) -> str:
+    def verificar_propietario_reserva(self, documento: str) -> str:
         """Indica si el usuario tiene al menos una reserva activa o histórica (R9)."""
         doc_limpio = str(documento).strip()
         for r in self.listar_reservas():
@@ -176,8 +245,7 @@ class GymService:
         seleccionada = activas[-1] if activas else reservas[-1]
         return seleccionada.mostrar_resumen()
 
-    def consultar_disponibilidad(self, fecha: str,
-                                 hora_actual: datetime | None = None) -> list[tuple[str, str, str]]:
+    def consultar_disponibilidad(self, fecha: str, hora_actual: datetime | None = None) -> list[tuple[str, str, str]]:
         """Retorna la disponibilidad detallada (libre, reservado, apartado) por horario (R14)."""
         self._validar_fecha(fecha)
         ahora = hora_actual or datetime.now()
@@ -301,9 +369,6 @@ class GymService:
             return []
         return self.prioridades.listar()
 
-   # =========================================================================
-    # MÉTODOS DE APOYO Y VALIDACIÓN INTERNA
-    # =========================================================================
     def _exigir_usuario(self, documento: str) -> Usuario:
         """Valida que el usuario exista en el repositorio o lanza excepción."""
         usuario = self.usuarios.buscar(documento)

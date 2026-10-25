@@ -198,4 +198,72 @@ class TestConsultasYDisponibilidad(unittest.TestCase):
         self.assertEqual(estados["02:00 PM"], "libre")
 
 
+class TestPrioridades(unittest.TestCase):
+    """Pruebas de HU-08: Sistema dinámico de prioridades y caducidad (R12, R13)."""
+
+    def setUp(self):
+        self.gym = crear_gym_prueba()
+        self.gym.registrar_usuario("Mariana", "1004", "Administración")
+        self.gym.registrar_usuario("Diego", "1005", "Sistemas")
+        self.fecha = "2026-11-20"
+        self.horario = "08:00 AM"
+        # 1 día antes a las 08:00 AM (tiempo de sobra antes de las 2 horas límite)
+        self.hora_solicitud = datetime(2026, 11, 19, 8, 0)
+
+    def test_prioridad_por_usuario_habitual(self):
+        # Mariana registra 3 visitas a las 08:00 AM
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+
+        msg = self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+        self.assertIn("obtuvo prioridad", msg)
+        self.assertEqual(len(self.gym.listar_prioridades()), 1)
+
+    def test_prioridad_rechazada_si_no_cumple(self):
+        # Solo 1 visita
+        self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+        self.gym.registrar_visita("1005", "10:00 AM", 60, ["Poleas"])
+
+        with self.assertRaises(PrioridadNoCumpleError):
+            self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+
+
+  def test_cupo_con_prioridad_no_puede_ser_reservado_por_otro(self):
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+        self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+
+        # Diego intenta reservar ese cupo
+        with self.assertRaises(CupoApartadoError):
+            self.gym.realizar_reserva("1005", self.horario, self.fecha, self.hora_solicitud)
+
+    def test_confirmar_prioridad_a_tiempo(self):
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+        self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+
+        # Confirmar 3 horas antes del horario (05:00 AM del mismo día) -> Límite es 06:00 AM
+        hora_confirmacion = datetime(2026, 11, 20, 5, 0)
+        msg = self.gym.confirmar_prioridad("1004", self.horario, self.fecha, hora_confirmacion)
+        self.assertIn("confirmó su asistencia", msg)
+        self.assertTrue(self.gym.listar_prioridades()[0].confirmada)
+
+    def test_confirmar_prioridad_tarde_libera_cupo(self):
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+        self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+
+        # Confirmar 1 hora antes (07:00 AM) -> Ya venció el límite de 2 horas (06:00 AM)
+        hora_tardia = datetime(2026, 11, 20, 7, 0)
+        msg = self.gym.confirmar_prioridad("1004", self.horario, self.fecha, hora_tardia)
+        self.assertIn("queda libre", msg)
+        self.assertEqual(len(self.gym.listar_prioridades()), 0)
+
+
+if _name_ == "_main_":
+    unittest.main()
+
+
+
+
 

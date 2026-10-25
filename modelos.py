@@ -10,13 +10,35 @@ from excepciones import (
 
 # ------------------------------------------------------------------ Utilidades de fecha (Juan José)
 
+def es_bisiesto(anio: int) -> bool:
+    """Determina si un año es bisiesto según las reglas gregorianas."""
+    return anio % 4 == 0 and (anio % 100 != 0 or anio % 400 == 0)
 
 
+def es_fecha_valida(fecha: str) -> bool:
+    """Valida matemáticamente que la fecha tenga formato AAAA-MM-DD y exista en el calendario."""
+    if not isinstance(fecha, str):
+        return False
+    partes = fecha.strip().split("-")
+    if len(partes) != 3:
+        return False
 
+    anio_texto, mes_texto, dia_texto = partes
+    if not (anio_texto.isdigit() and mes_texto.isdigit() and dia_texto.isdigit()):
+        return False
+    if len(anio_texto) != 4 or len(mes_texto) != 2 or len(dia_texto) != 2:
+        return False
 
+    anio, mes, dia = int(anio_texto), int(mes_texto), int(dia_texto)
+    if not 1 <= mes <= 12:
+        return False
 
+    dias_por_mes = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    maximo_dia = dias_por_mes[mes - 1]
+    if mes == 2 and not es_bisiesto(anio):
+        maximo_dia = 28
 
-
+    return 1 <= dia <= maximo_dia
 
 # ------------------------------------------------------------------ Entidades (Samuel)
 @dataclass

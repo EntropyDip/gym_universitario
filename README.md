@@ -43,4 +43,3 @@ El proyecto modela el mundo de un gimnasio a través de 5 entidades:
 - Un horario con prioridad otorgada queda reservado exclusivamente para ese usuario: nadie más puede reservarlo ni pedir prioridad sobre él mientras la prioridad siga vigente.
 - Una prioridad no confirmada dentro de las 2 horas previas al horario se libera automáticamente, ya sea al intentar confirmarla, al intentar reservar ese horario, o al pedir una nueva prioridad.
 - Eliminar un usuario también elimina sus reservas, visitas y prioridades asociadas.
-

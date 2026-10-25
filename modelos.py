@@ -149,7 +149,48 @@ class Visita:
 
 # ------------------------------------------------------------------ Entidad Prioridad (Angelina)
 
+@dataclass
+class Prioridad:
+    """Representa un cupo apartado con prioridad de membresía para un usuario."""
+    documento: str
+    nombre: str
+    horario: str
+    fecha: str
+    hora_solicitud: datetime
+    confirmada: bool = False
 
+    def _post_init_(self) -> None:
+        self.documento = str(self.documento).strip()
+        self.nombre = str(self.nombre).strip()
+        self.horario = str(self.horario).strip()
+        self.fecha = str(self.fecha).strip()
+        if not self.documento:
+            raise DatoVacioError("El documento no puede estar vacío.")
+        if not self.nombre:
+            raise DatoVacioError("El nombre no puede quedar vacío.")
+        if not self.horario:
+            raise DatoVacioError("El horario no puede quedar vacío.")
+        if not es_fecha_valida(self.fecha):
+            raise FechaInvalidaError(
+                "La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15.")
+
+    def hora_del_horario(self) -> datetime:
+        """Convierte la fecha y horario en un objeto datetime."""
+        return datetime.strptime(f"{self.fecha} {self.horario}", "%Y-%m-%d %I:%M %p")
+
+    def limite_confirmacion(self) -> datetime:
+        """Calcula el límite estricto de confirmación (2 horas antes del horario apartado)."""
+        return self.hora_del_horario() - timedelta(hours=2)
+
+    def esta_vencida(self, hora_actual: datetime) -> bool:
+        """Determina si la prioridad caducó por no haber sido confirmada a tiempo."""
+        if self.confirmada:
+            return False
+        return hora_actual > self.limite_confirmacion()
+
+    def confirmar(self) -> None:
+        """Marca la prioridad como confirmada."""
+        self.confirmada = True
 
 
 

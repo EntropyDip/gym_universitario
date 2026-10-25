@@ -79,8 +79,7 @@ class ReservaRepositorioMemoria(ReservaRepositorio):
     def agregar(self, reserva: Reserva) -> None:
         self._reservas.append(reserva)
 
-    def buscar(self, documento: str, horario: str, fecha: str,
-               activa: bool | None = None) -> Reserva | None:
+    def buscar(self, documento: str, horario: str, fecha: str, activa: bool | None = None) -> Reserva | None:
         doc = documento.strip()
         for reserva in self._reservas:
             if (reserva.documento == doc and reserva.horario == horario
@@ -102,6 +101,45 @@ class ReservaRepositorioMemoria(ReservaRepositorio):
 
 # ------------------------------------------------------------------ Repositorio de Visitas (Juan José)
 
+class VisitaRepositorio(ABC):
+    """Contrato abstracto para el almacenamiento de visitas."""
+
+    @abstractmethod
+    def agregar(self, visita: Visita) -> None:
+        """Guarda un registro de visita."""
+
+    @abstractmethod
+    def buscar_por_documento(self, documento: str) -> list[Visita]:
+        """Retorna todas las visitas asociadas a un documento."""
+
+    @abstractmethod
+    def listar(self) -> list[Visita]:
+        """Devuelve la lista completa de visitas."""
+
+    @abstractmethod
+    def eliminar_por_documento(self, documento: str) -> None:
+        """Elimina todas las visitas de un usuario por documento."""
+
+
+class VisitaRepositorioMemoria(VisitaRepositorio):
+    """Implementación en memoria del repositorio de visitas."""
+
+    def __init__(self) -> None:
+        self._visitas: list[Visita] = []
+
+    def agregar(self, visita: Visita) -> None:
+        self._visitas.append(visita)
+
+    def buscar_por_documento(self, documento: str) -> list[Visita]:
+        doc = documento.strip()
+        return [v for v in self._visitas if v.documento == doc]
+
+    def listar(self) -> list[Visita]:
+        return list(self._visitas)
+
+    def eliminar_por_documento(self, documento: str) -> None:
+        doc = documento.strip()
+        self._visitas = [v for v in self._visitas if v.documento != doc]
 
 
 

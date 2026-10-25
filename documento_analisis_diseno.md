@@ -739,12 +739,3 @@ python -m unittest test_gym.py -v
 
 ---
 
-## 6. Plan de Sustentación Oral
-
-El equipo preparó un esquema de sustentación cruzada donde cualquiera de los tres integrantes es capaz de explicar la totalidad del sistema y responder a las preguntas evaluativas del docente:
-
-| Integrante | Dominio Principal | Preguntas Clave de Sustentación |
-|---|---|---|
-| **Samuel Zapata** | Arquitectura en capas, persistencia en repositorios, eliminación transaccional en cascada y ensamblaje general en `main.py`. | *¿Por qué las validaciones residen en `GymService` y no en la interfaz gráfica? ¿Cómo garantiza la cascada que no queden reservas huérfanas al eliminar un usuario?* |
-| **Juan José Aguirre** | Algoritmo matemático de años bisiestos y calendario gregoriano, cálculo de moda/promedios y renderizado analítico con `matplotlib`. | *¿Por qué el año 1900 no es bisiesto pero el 2000 sí? ¿Cómo se calcula el promedio de permanencia por usuario y cómo se integra el canvas en Tkinter?* |
-| **Angelina Negrette** | Lógica de adjudicación de cupos preferenciales, resolución de empates en fidelidad, ventana de caducidad automática de 2 horas y ciclo de vida de los componentes visuales. | *¿Qué sucede si dos usuarios empatan en tiempo acumulado? ¿Cómo funciona la liberación automática de prioridades cuando el estudiante no confirma a tiempo?* |

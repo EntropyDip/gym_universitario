@@ -132,8 +132,36 @@ def flujo_consola(gym: GymService) -> None:
     print(f"Usuarios restantes: {[u.nombre for u in gym.listar_usuarios()]}")
     print(f"Reservas restantes: {len(gym.listar_reservas())}")
     print(f"Visitas restantes: {len(gym.listar_visitas())}")
-
     print("\n" + "=" * 70)
     print("FIN DEL FLUJO DE PRUEBAS DE CONSOLA")
     print("=" * 70 + "\n")
+
+
+def iniciar_interfaz(gym: GymService) -> None:
+    """Abre la ventana principal con pestañas de navegación."""
+    from interfaz.ventana_principal import VentanaPrincipal
+    app = VentanaPrincipal(gym)
+    app.mainloop()
+
+
+def main() -> None:
+    """Lee argumentos de línea de comandos y arranca la consola o la interfaz gráfica."""
+    lector = argparse.ArgumentParser(description="Sistema de gestión de gimnasio universitario")
+    lector.add_argument("--demo", action="store_true", help="Carga datos de ejemplo en el sistema")
+    lector.add_argument("--consola", action="store_true", help="Ejecuta el flujo completo por consola")
+    argumentos = lector.parse_args()
+
+    gym = crear_servicio()
+    if argumentos.consola:
+        flujo_consola(gym)
+        return
+
+    if argumentos.demo:
+        cargar_datos_demo(gym)
+
+    iniciar_interfaz(gym)
+
+
+if _name_ == "_main_":
+    main()
 

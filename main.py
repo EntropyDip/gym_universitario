@@ -105,3 +105,35 @@ def flujo_consola(gym: GymService) -> None:
 
     # --- MÓDULO 3: PRIORIDADES Y CONSULTAS (Angelina Negrette) ---
 
+    print("\n--- 3. Prioridades y Consultas de Disponibilidad (Angelina) ---")
+    _intentar("R9: Verificar propietario de reserva", gym.verificar_propietario_reserva, "1004")
+    _intentar("R9: Verificar propietario inexistente", gym.verificar_propietario_reserva, "9999")
+    _intentar("R10: Mostrar resumen de reserva", gym.mostrar_resumen_reserva, "1004")
+
+    # Solicitar prioridad para otra fecha (Mariana es habitual en 08:00 AM con 3 visitas)
+    fecha_futura = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
+    _intentar("R12: Solicitar prioridad de membresía", gym.prioridad_membresia, "1004", "08:00 AM", fecha_futura, ahora)
+    _intentar("R12: Solicitar prioridad sin cumplir (debe fallar)", gym.prioridad_membresia, "1005", "02:00 PM", fecha_futura, ahora)
+
+    # Intentar reservar cupo apartado con prioridad por otro
+    _intentar("R3: Reservar cupo apartado con prioridad (debe fallar)", gym.realizar_reserva, "1005", "08:00 AM", fecha_futura, ahora)
+
+    # Confirmar prioridad dentro del tiempo límite
+    _intentar("R13: Confirmar prioridad de asistencia", gym.confirmar_prioridad, "1004", "08:00 AM", fecha_futura, ahora)
+
+    # R14: Disponibilidad general
+    print("\nR14: Consulta de disponibilidad para fecha futura:")
+    for horario, estado, detalle in gym.consultar_disponibilidad(fecha_futura, ahora):
+        print(f"  - [{horario}] {estado.upper()}: {detalle}")
+
+    # Eliminación en cascada (R2)
+    print("\n--- 4. Eliminación en Cascada (Samuel) ---")
+    _intentar("R2: Eliminar usuario Diego", gym.eliminar_usuario, "Diego Vega", "1005")
+    print(f"Usuarios restantes: {[u.nombre for u in gym.listar_usuarios()]}")
+    print(f"Reservas restantes: {len(gym.listar_reservas())}")
+    print(f"Visitas restantes: {len(gym.listar_visitas())}")
+
+    print("\n" + "=" * 70)
+    print("FIN DEL FLUJO DE PRUEBAS DE CONSOLA")
+    print("=" * 70 + "\n")
+

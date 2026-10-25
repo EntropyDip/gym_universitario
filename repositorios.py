@@ -99,3 +99,15 @@ class ReservaRepositorioMemoria(ReservaRepositorio):
     def eliminar_por_documento(self, documento: str) -> None:
         doc = documento.strip()
         self._reservas = [r for r in self._reservas if r.documento != doc]
+
+# ------------------------------------------------------------------ Repositorio de Visitas (Juan José)
+
+
+
+
+
+
+
+
+
+# ------------------------------------------------------------------ Repositorio de Prioridades (Angelina)

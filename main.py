@@ -17,7 +17,6 @@ from repositorios import (
 )
 from servicios import GymService
 
-
 def crear_servicio() -> GymService:
     """Instancia los repositorios en memoria y el servicio principal con inyección de dependencias."""
     return GymService(
@@ -110,9 +109,6 @@ def flujo_consola(gym: GymService) -> None:
     _intentar("R11: Promedio de duración por usuario", gym.promedio_duracion_por_usuario)
     _intentar("R15: Equipo más utilizado", gym.equipo_mas_utilizado)
     print(f"Ranking completo de equipos: {gym.ranking_equipos()}")
-
-
-
 
     # --- MÓDULO 3: PRIORIDADES Y CONSULTAS (Angelina Negrette) ---
 

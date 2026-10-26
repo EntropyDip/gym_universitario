@@ -46,14 +46,14 @@ def cargar_datos_demo(gym: GymService) -> None:
     manana = fecha_de_manana()
 
     # 2. Visitas históricas para estadísticas y fidelidad (R4, R5, R6, R11, R15)
-    gym.registrar_visita("1004", "08:00 AM", 60, ["Cinta de correr", "Mancuernas"])
-    gym.registrar_visita("1004", "08:00 AM", 75, ["Cinta de correr", "Bicicleta estática"])
-    gym.registrar_visita("1004", "08:00 AM", 50, ["Mancuernas", "Banco plano"])  # Habitual a las 08:00 AM
+    gym.registrar_visita("1004", "08:00 AM", 60, ["Cinta de correr", "Mancuernas"], fecha_hace(6))
+    gym.registrar_visita("1004", "08:00 AM", 75, ["Cinta de correr", "Bicicleta estática"], fecha_hace(4))
+    gym.registrar_visita("1004", "08:00 AM", 50, ["Mancuernas", "Banco plano"], fecha_hace(2))  # Habitual a las 08:00 AM
 
-    gym.registrar_visita("1005", "10:00 AM", 90, ["Prensa de piernas", "Poleas"])
-    gym.registrar_visita("1005", "02:00 PM", 85, ["Banco plano", "Mancuernas"])
+    gym.registrar_visita("1005", "10:00 AM", 90, ["Prensa de piernas", "Poleas"], fecha_hace(5))
+    gym.registrar_visita("1005", "02:00 PM", 85, ["Banco plano", "Mancuernas"], fecha_hace(3))
 
-    gym.registrar_visita("800", "08:00 AM", 40, ["Cinta de correr"])
+    gym.registrar_visita("800", "08:00 AM", 40, ["Cinta de correr"], fecha_hace(1))
 
     # 3. Reservas (R3): varios usuarios pueden compartir la misma franja (máximo 15)
     gym.realizar_reserva("1005", "10:00 AM", manana)

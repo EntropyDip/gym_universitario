@@ -45,8 +45,8 @@ class ReservaDuplicadaError(GymError):
     """El usuario ya tiene una reserva activa en esa fecha (o el cupo ya es suyo)."""
 
 
-class CupoApartadoError(GymError):
-    """El cupo está apartado con prioridad por otro usuario."""
+class CupoLlenoError(GymError):
+    """La franja (fecha y horario) ya alcanzó el máximo de usuarios permitidos."""
 
 
 class PrioridadNoCumpleError(GymError):

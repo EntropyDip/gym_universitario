@@ -5,7 +5,7 @@ Organizado por módulos y responsabilidades de los integrantes:
 - TestVisitasYFechas & TestEstadisticas: Juan José Aguirre Durango (HU-04, HU-05)
 - TestConsultasYDisponibilidad & TestPrioridades: Angelina Negrette Diaz (HU-07, HU-08)
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 import unittest
 
 from excepciones import (
@@ -21,7 +21,7 @@ from excepciones import (
     UsuarioNoRegistradoError,
     UsuarioYaRegistradoError,
 )
-from modelos import es_bisiesto, es_fecha_valida
+from modelos import Prioridad, es_bisiesto, es_fecha_valida
 from repositorios import (
     PrioridadRepositorioMemoria,
     ReservaRepositorioMemoria,
@@ -88,7 +88,7 @@ class TestUsuarios(unittest.TestCase):
         # Crear datos asociados a Mariana
         self.gym.realizar_reserva("1004", "08:00 AM", "2026-11-10")
         self.gym.registrar_visita("1004", "08:00 AM", 60, ["Mancuernas"])
-        self.gym.prioridades.agregar(self.gym.usuarios.buscar("1004"))  # mock de objeto con documento
+        self.gym.prioridades.agregar(Prioridad("1004", "Mariana", "08:00 AM", "2026-11-12", datetime(2026, 11, 9, 8, 0)))
 
         # Eliminar Mariana
         self.gym.eliminar_usuario("Mariana", "1004")
@@ -96,7 +96,7 @@ class TestUsuarios(unittest.TestCase):
         self.assertEqual(len(self.gym.listar_usuarios()), 1)
         self.assertEqual(len(self.gym.listar_reservas()), 0)
         self.assertEqual(len(self.gym.listar_visitas()), 0)
-
+        self.assertEqual(len(self.gym.listar_prioridades()), 0)
 
 class TestReservas(unittest.TestCase):
     """Pruebas de HU-02: Reservas de cupos (R3, R7, R8)."""
@@ -187,6 +187,14 @@ class TestVisitasYFechas(unittest.TestCase):
                 with self.assertRaises(DuracionInvalidaError):
                     self.gym.registrar_visita("1004", "08:00 AM", dur, ["Mancuernas"])
 
+    def test_registrar_visita_usuario_no_registrado(self):
+        with self.assertRaises(UsuarioNoRegistradoError):
+            self.gym.registrar_visita("9999", "08:00 AM", 60, ["Mancuernas"])
+    
+    def test_registrar_visita_horario_invalido(self):
+        with self.assertRaises(HorarioInvalidoError):
+            self.gym.registrar_visita("1004", "11:00 AM", 60, ["Mancuernas"])
+
 
 class TestEstadisticas(unittest.TestCase):
     """Pruebas de HU-05: Estadísticas y métricas analíticas (R5, R6, R11, R15)."""
@@ -221,6 +229,13 @@ class TestEstadisticas(unittest.TestCase):
         # Ranking de equipos: Mancuernas (2 visitas), Cinta (2 visitas)
         ranking = dict(self.gym.ranking_equipos())
         self.assertEqual(ranking["Mancuernas"], 2)
+        self.assertEqual(ranking["Cinta"], 2)
+        
+     def test_promedio_duracion_por_usuario_texto(self):
+        self.gym.registrar_visita("1004", "08:00 AM", 40, ["Cinta"])
+        self.gym.registrar_visita("1004", "08:00 AM", 60, ["Cinta"])
+        informe = self.gym.promedio_duracion_por_usuario()
+        self.assertIn("50.0 minutos", informe)       
         
 # =========================================================================
 # MÓDULO 3: PRIORIDADES Y CONSULTAS (Angelina Negrette - R9, R10, R12, R13, R14)
@@ -317,6 +332,40 @@ class TestPrioridades(unittest.TestCase):
         self.assertIn("queda libre", msg)
         self.assertEqual(len(self.gym.listar_prioridades()), 0)
 
+    def test_confirmar_prioridad_inexistente(self):
+        with self.assertRaises(PrioridadNoEncontradaError):
+            self.gym.confirmar_prioridad("1004", self.horario, self.fecha, self.hora_solicitud)
+    
+    def test_prioridad_con_menos_de_2_horas_de_antelacion(self):
+        hora_tardia = datetime(2026, 11, 20, 7, 0)  # límite era 06:00 AM
+        with self.assertRaises(PrioridadNoCumpleError):
+            self.gym.prioridad_membresia("1004", self.horario, self.fecha, hora_tardia)
+    
+    def test_prioridad_por_mayor_tiempo_acumulado(self):
+        # Sin 3 visitas en el horario, pero Mariana acumula más minutos que Diego
+        self.gym.registrar_visita("1004", "10:00 AM", 90, ["Mancuernas"])
+        self.gym.registrar_visita("1005", "10:00 AM", 60, ["Poleas"])
+        msg = self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+        self.assertIn("obtuvo prioridad", msg)
+    
+    def test_dueno_de_la_prioridad_no_puede_reservar_ese_cupo(self):
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+        self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+        with self.assertRaises(ReservaDuplicadaError):
+            self.gym.realizar_reserva("1004", self.horario, self.fecha, self.hora_solicitud)
+    
+    def test_disponibilidad_muestra_cupo_apartado(self):
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
+        self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
+        disp = self.gym.consultar_disponibilidad(self.fecha, self.hora_solicitud)
+        estados = {h: e for h, e, _ in disp}
+        self.assertEqual(estados["08:00 AM"], "apartado")
+    
+    def test_modelo_prioridad_valida_datos_vacios(self):
+        with self.assertRaises(DatoVacioError):
+            Prioridad("", "Mariana", self.horario, self.fecha, self.hora_solicitud)
 
 if __name__ == "__main__":
     unittest.main()

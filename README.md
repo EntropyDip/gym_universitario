@@ -174,7 +174,7 @@ python -m unittest test_gym.py -v
 
 ## Equipo de Desarrollo
 
-Proyecto desarrollado para la asignatura **Programación Orientada a Objetos** en la **Universidad de Medellín** (2026), bajo la tutoría del docente **Mario Alejandro Saldarriaga Álvarez**.
+Proyecto desarrollado para la asignatura **Programación Orientada a Objetos** en la **Universidad de Medellín** (2026), docente **Mario Alejandro Saldarriaga Álvarez**.
 
 - **Samuel Zapata Trujillo** — Módulo 1: Usuarios, Reservas, Aforo y Ensamblaje (`main.py`, `PanelUsuarios`, `PanelReservas`, R1, R2, R3, R7, R8).
 - **Juan José Aguirre Durango** — Módulo 2: Visitas, Calendario y Estadísticas Analíticas (`PanelVisitas`, `PanelEstadisticas`, R4, R5, R6, R11, R15).

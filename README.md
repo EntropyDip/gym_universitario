@@ -1,45 +1,23 @@
-# Sistema de Gestión de Gimnasio Universitario
-
-Sistema en Python para administrar usuarios, reservas y visitas de un gimnasio universitario. Permite registrar usuarios, gestionar reservas de horarios, llevar un control de visitas con los equipos utilizados, y obtener estadísticas sobre los horarios y programas académicos más frecuentes.
-
-## Descripción
-
-El proyecto modela el mundo de un gimnasio a través de 5 entidades:
-
-- **`Usuario`**: representa a un estudiante inscrito en el gimnasio (nombre, documento y programa académico).
-- **`Reserva`**: representa el apartado de un horario por parte de un usuario, con su propio comportamiento (cancelar, confirmar, verificar propietario, mostrar resumen).
-- **`Visita`**: registra que un usuario asistió al gimnasio en un horario dado, con la duración de la visita y los equipos usados.
-- **`Prioridad`**: representa un cupo apartado con prioridad para un usuario en un horario y fecha específicos, con estado de confirmación.
-- **`Gym`**: entidad central que administra la colección de usuarios, reservas, visitas y prioridades, y gestiona los horarios disponibles.
-
-## Funcionalidades
-
-| Función | Descripción |
-|---|---|
-| `registrar_usuario` | Registra un nuevo usuario validando que el documento no esté duplicado. |
-| `eliminar_usuario` | Elimina un usuario existente por nombre y documento, junto con sus reservas, visitas y prioridades asociadas. |
-| `realizar_reserva` | Crea una reserva validando que el usuario exista, no tenga ya una reserva activa ese día, que el horario solicitado sea válido y que no esté apartado con prioridad por otro usuario. |
-| `registrar_visita` | Registra una visita (horario, duración y equipos usados) de un usuario ya registrado. |
-| `horario_mas_frecuente` | Calcula el horario con mayor cantidad de visitas registradas. |
-| `programa_mas_frecuente` | Calcula el programa académico con más usuarios registrados. |
-| `Reserva.cancelar` | Cambia el estado de una reserva activa a cancelada. |
-| `Reserva.confirmar` | Reactiva una reserva previamente cancelada. |
-| `Reserva.coincide_con` | Verifica si una reserva pertenece a un documento dado. |
-| `Reserva.mostrar_resumen` | Genera un resumen textual del estado de la reserva. |
-| `promedio_duracion_por_usuario` | Calcula para cada usuario el promedio de duración de sus visitas registradas. |
-| `prioridad_membresia` | Otorga prioridad a un usuario para reservar un horario si es "habitual" (≥3 visitas) o tiene mayor tiempo acumulado. |
-| `confirmar_prioridad` | Confirma una prioridad antes del límite de 2 horas; de lo contrario, el cupo se libera. |
-
-## Restricciones
-
-- No se permiten **documentos duplicados** al registrar un usuario.
-- Un usuario solo puede tener **una reserva activa por fecha**.
-- El horario solicitado debe pertenecer a la lista de `horarios_disponibles` del gimnasio.
-- Las visitas y reservas solo pueden registrarse a nombre de usuarios **ya registrados**.
-- Cancelar/confirmar una reserva no tiene efecto si ya se encuentra en ese estado (evita transiciones redundantes).
-- Los datos de creación de usuarios, reservas y prioridades no pueden estar vacíos (el sistema levanta un `ValueError`).
-- Las fechas deben ingresarse en formato estricto `AAAA-MM-DD` y el sistema valida matemáticamente que existan en el calendario (incluyendo años bisiestos).
-- La prioridad sobre un horario se otorga si el usuario es "habitual" en ese horario (≥3 visitas registradas a esa hora, **sin importar la fecha en que ocurrieron esas visitas**) o si acumula estrictamente más minutos de uso que cualquier otro usuario; en caso de empate en el tiempo acumulado, ningún usuario obtiene prioridad por ese criterio.
-- Un horario con prioridad otorgada queda reservado exclusivamente para ese usuario: nadie más puede reservarlo ni pedir prioridad sobre él mientras la prioridad siga vigente.
-- Una prioridad no confirmada dentro de las 2 horas previas al horario se libera automáticamente, ya sea al intentar confirmarla, al intentar reservar ese horario, o al pedir una nueva prioridad.
-- Eliminar un usuario también elimina sus reservas, visitas y prioridades asociadas.
+python main.py --consola
+```
+---
+## 🧪 Pruebas Unitarias Automatizadas
+El sistema cuenta con una batería de **55 pruebas unitarias automatizadas** implementadas con la biblioteca estándar `unittest`:
+```bash
+python -m unittest test_gym.py -v
+```
+### Cobertura de las 55 Pruebas:
+- **`TestCapacidadPorFranja` (14 pruebas)**: Límite de aforo de 15 usuarios por franja, reserva número 16 rechazada con `CupoLlenoError`, liberación de cupos al cancelar, reactivación en franja llena, visitas como ocupantes, cómputo único por estudiante multirrol, visitante 16 rechazado, prevención de visitas duplicadas con `VisitaDuplicadaError`, visitas en diferentes franjas o fechas, visitas con fecha hoy por defecto, prioridad como cupo ocupado y desestimación de prioridad innecesaria para quien ya tiene reserva activa.
+- **`TestPrioridades` (11 pruebas)**: Prioridad por usuario habitual (≥3 visitas), rechazo por incumplimiento de requisitos, reserva concurrente de franja con prioridad ajena, confirmación a tiempo, liberación automática por confirmación tardía, búsqueda inexistente, rechazo con menos de 2 horas de antelación, prioridad por mayor tiempo acumulado, bloqueo de reserva redundante al titular de la prioridad, reflejo de prioridad en disponibilidad y validación de datos vacíos.
+- **`TestReservas` (7 pruebas)**: Reserva exitosa, rechazo por usuario no registrado, franja inválida, fecha inválida o año no bisiesto, doble reserva activa en el mismo día, ciclo completo de cancelación/reactivación y cancelación de reserva inexistente.
+- **`TestUsuarios` (7 pruebas)**: Registro exitoso, duplicados rechazados, campos vacíos o solo espacios, saneamiento de espacios en documento, eliminación inexistente, eliminación con nombre incorrecto y eliminación en cascada atómica (usuarios, reservas, visitas y prioridades).
+- **`TestVisitasYFechas` (6 pruebas)**: Registro exitoso de visita, duración inválida (cero, negativa o booleano), usuario no registrado, franja inválida, algoritmo matemático de años bisiestos y validador de calendario gregoriano.
+- **`TestEstadisticas` (4 pruebas)**: Horario pico más frecuente, carrera académica más frecuente, promedio de duración en minutos por estudiante y comportamiento con repositorios vacíos.
+- **`TestConsultasYDisponibilidad` (3 pruebas)**: Verificación de titularidad de reserva (Sí/No), resumen textual de reserva y consulta de estados de disponibilidad.
+- **`TestEspaciosEnFechasYPrioridadesVigentes` (3 pruebas)**: Cancelación con espacios accidentales en la fecha, solicitud de prioridad con espacios y purga reactiva de prioridades vencidas.
+---
+## 👥 Equipo de Desarrollo
+Proyecto desarrollado para la asignatura **Programación Orientada a Objetos** en la **Universidad de Medellín** (2026), bajo la tutoría del docente **Mario Alejandro Saldarriaga Álvarez**.
+- **Samuel Zapata Trujillo** — Módulo 1: Usuarios, Reservas, Aforo y Ensamblaje (`main.py`, `PanelUsuarios`, `PanelReservas`, R1, R2, R3, R7, R8).
+- **Juan José Aguirre Durango** — Módulo 2: Visitas, Calendario y Estadísticas Analíticas (`PanelVisitas`, `PanelEstadisticas`, R4, R5, R6, R11, R15).
+- **Angelina Negrette Diaz** — Módulo 3: Prioridades, Consultas y Diseño de Interfaz (`VentanaPrincipal`, `componentes.py`, `PanelPrioridades`, R9, R10, R12, R13, R14).

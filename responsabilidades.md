@@ -1,4 +1,4 @@
-# Historias de Usuario y Plan de Trabajo (Entrega 2) – Gimnasio universitario
+# Historias de Usuario y Plan de Trabajo (Entrega 2) – Gimnasio Universitario
 
 El trabajo se reparte en tres módulos de 18 puntos de esfuerzo cada uno (33,3 % por integrante), con ramas por historia de usuario, revisión cruzada de cada pull request y una sustentación preparada desde el primer día.
 
@@ -10,342 +10,255 @@ El trabajo se reparte en tres módulos de 18 puntos de esfuerzo cada uno (33,3 %
 
 **Equipo:** Juan José Aguirre Durango, Angelina Negrette Diaz, Samuel Zapata Trujillo
 
-**Repositorio:** https://github.com/EntropyDip/gym\_universitario.git
+**Repositorio:** https://github.com/EntropyDip/gym_universitario.git
+
+---
 
 ## 1. Lineamientos técnicos de la Entrega 2
 
-La entrega pide diseño e implementación completa, manejo de excepciones, interfaz gráfica y buena modularización. Estas reglas son obligatorias para los tres.
+La entrega pide diseño e implementación completa, manejo riguroso de excepciones, interfaz gráfica moderna y desacoplada, y modularización ejemplar. Estas directrices son de cumplimiento obligatorio:
 
-- **Arquitectura por capas.** `modelos.py` (entidades y validación de sus datos) → `repositorios.py` (almacenamiento: clase abstracta y versión en memoria) → `servicios.py` (reglas de negocio en `GymService`) → `interfaz/` (solo presentación).
-- **La interfaz no contiene reglas de negocio.** Llama a los métodos del servicio y a `listar_*`; nunca toca las listas internas.
-- **Excepciones, no textos de error.** Toda regla violada lanza una excepción que hereda de `GymError`. La interfaz la captura y la muestra en un cuadro de diálogo. Prohibido `print` en modelos y servicios.
-- **Hora inyectable.** Los métodos que dependen del tiempo reciben `hora_actual` como parámetro opcional (por defecto, el reloj del sistema), para poder probarlos.
-- **Nombres del documento de análisis.** Atributos y métodos usan exactamente los nombres de las secciones 2.4, 3.1 y 3.2 del documento. Si uno cambia en el código, se cambia el mismo día en el documento.
-- **Estilo.** `snake_case` en funciones y atributos, `PascalCase` en clases, docstring en cada clase y método público.
-- **Librerías externas.** `matplotlib` y `tkcalendar`, declaradas en `requirements.txt`.
-- **Participación.** Los tres programan y todo el código debe poder sustentarlo cualquiera de los tres.
-- **Sin código muerto.** `proyecto_gym.py` se elimina con `git rm` cuando su lógica ya esté migrada.
+- **Arquitectura por capas.** `modelos.py` (entidades del dominio y validación interna) → `repositorios.py` (almacenamiento abstracto e implementaciones en memoria) → `servicios.py` (lógica y orquestación de negocio en `GymService`) → `interfaz/` (capa de presentación exclusivamente).
+- **La interfaz no contiene reglas de negocio.** Únicamente invoca métodos del servicio y funciones de lectura (`listar_*`, `consultar_disponibilidad`, `ocupantes_franja`); jamás accede ni muta las colecciones internas de forma directa.
+- **Excepciones formales de dominio.** Toda infracción de una regla de negocio genera una excepción que hereda de `GymError`. La capa visual la intercepta y la despliega amigablemente mediante cuadros de diálogo (`messagebox.showerror`). Queda terminantemente prohibido el uso de `print` como mecanismo de control en modelos y servicios.
+- **Hora inyectable y determinismo.** Aquellos métodos que dependen del tiempo aceptan `hora_actual` como parámetro opcional (por defecto, reloj del sistema), garantizando la reproducibilidad y aislamiento de las pruebas unitarias.
+- **Capacidad por franja horaria (15 usuarios).** Cada turno de atención (franjas de 2 horas entre 08:00 AM y 08:00 PM) cuenta con un aforo máximo de 15 usuarios concurrentes (`capacidad_maxima = 15`), considerando de forma unificada reservas activas, visitas registradas y cupos con prioridad de membresía. Cuando se alcanza dicho límite, el sistema lanza `CupoLlenoError`.
+- **Cómputo unificado de ocupantes.** Si un estudiante posee tanto reserva activa como asistencia registrada en la misma franja y fecha, se contabiliza como **un único cupo ocupado**.
+- **Consistencia nominal con el documento de análisis.** Clases, atributos, excepciones y métodos conservan rigurosamente la nomenclatura descrita en las especificaciones del documento técnico.
+- **Estilo y calidad de código.** Convención PEP 8 (`snake_case` para funciones/variables, `PascalCase` para clases), tipado estático asistido (`typing`), docstrings explicativos en cada módulo, clase y método público.
+- **Librerías externas y degradación elegante.** `matplotlib` y `tkcalendar`, registradas en `requirements.txt`, con manejo de excepciones por importación para garantizar que la aplicación continúe operando si alguna no está presente.
+- **Cobertura de pruebas unitarias.** Suite automatizada con `unittest` que cubre 55 pruebas en total, abarcando casos de éxito, bordes, límites de aforo y situaciones anómalas.
+
+---
 
 ## 2. Matriz de distribución equitativa del trabajo
 
-Son 15 requisitos funcionales, 5 por integrante. Cada uno también construye las pantallas de sus requisitos y las pruebas de su parte. Los puntos son una estimación de esfuerzo del equipo y suman 18 por persona.
+El proyecto comprende 15 requisitos funcionales formales distribuidos de manera equitativa: 5 requisitos por integrante (18 puntos de esfuerzo por persona, totalizando 54 puntos). Cada estudiante diseña e implementa la lógica de servicio, la capa visual de sus módulos y las respectivas pruebas unitarias.
 
-| Integrante | Módulo | Requisitos | Clases y componentes clave | Puntos |
-| --- | --- | --- | --- | --- |
-| Samuel Zapata Trujillo | Módulo 1: Usuarios, Reservas y ensamblaje | R1, R2, R3, R7, R8 | Usuario, Reserva, UsuarioRepositorio, ReservaRepositorio, PanelUsuarios, PanelReservas, main.py | 18 |
-| Juan José Aguirre Durango | Módulo 2: Visitas y Estadísticas | R4, R5, R6, R11, R15 | es\_bisiesto, es\_fecha\_valida, Visita, VisitaRepositorio, PanelVisitas, PanelEstadisticas | 18 |
-| Angelina Negrette Diaz | Módulo 3: Prioridades, Consultas de reserva y Diseño | R9, R10, R12, R13, R14 | Prioridad, PrioridadRepositorio, VentanaPrincipal, componentes, PanelPrioridades, diagrama de clases v2 | 18 |
+| Integrante | Módulo | Requisitos asignados | Clases y componentes clave | Puntos |
+|:---|:---|:---:|:---|:---:|
+| **Samuel Zapata Trujillo** | Módulo 1: Usuarios, Reservas, Aforo y Ensamblaje | R1, R2, R3, R7, R8 | `Usuario`, `Reserva`, `UsuarioRepositorio`, `ReservaRepositorio`, `PanelUsuarios`, `PanelReservas`, control de aforo (15 cupos), `main.py` | 18 |
+| **Juan José Aguirre Durango** | Módulo 2: Visitas, Calendario y Estadísticas | R4, R5, R6, R11, R15 | `es_bisiesto`, `es_fecha_valida`, `Visita`, `VisitaRepositorio`, `PanelVisitas`, `PanelEstadisticas` (KPIs y gráficos con `matplotlib`) | 18 |
+| **Angelina Negrette Diaz** | Módulo 3: Prioridades, Consultas y Diseño de Interfaz | R9, R10, R12, R13, R14 | `Prioridad`, `PrioridadRepositorio`, `VentanaPrincipal`, `componentes.py`, `PanelPrioridades`, disponibilidad y ocupantes de franja, diagrama de clases UML | 18 |
 
-**Compartido.** `excepciones.py` (cada uno agrega las excepciones de sus reglas), `test_gym.py` (cada uno escribe la clase de pruebas de su módulo) y el `README.md`.
+- **Componentes compartidos:** `excepciones.py` (enriquecido con las excepciones de cada módulo), `test_gym.py` (cada integrante aporta las clases de prueba de su módulo hasta consolidar los 55 tests), `requirements.txt` y `README.md`.
+- **Interoperabilidad:** El panel de reservas de Samuel consulta la disponibilidad y ocupantes desarrollados con Angelina (R14) e integra los botones de R9 y R10. El cálculo de prioridades de Angelina consulta el historial de visitas implementado por Juan José.
 
-**Integración entre módulos.** El panel de reservas de Samuel muestra la disponibilidad (R14) y los botones de R9 y R10, que usan métodos de Angelina. La prioridad de Angelina usa las visitas de Juan José. Por eso la sección 5 fija el orden de integración.
+---
 
 ## 3. Metodología de trabajo en Git
 
-### 3.1 Una rama por historia de usuario
+### 3.1 Ramas por historia de usuario
+Nadie realiza commits directamente sobre `main`. El desarrollo se estructura en ramas de características:
 
-Nadie hace commits directos en `main`. Cada historia se trabaja en su propia rama, creada desde `main` actualizado.
+| Rama | Responsable | Descripción de alcance |
+|---|---|---|
+| `feature/HU-01-usuarios` | Samuel | Registro y eliminación en cascada de usuarios |
+| `feature/HU-02-reservas` | Samuel | Reservas, cancelaciones, reactivaciones y aforo de 15 cupos |
+| `feature/HU-03-interfaz-ensamblaje` | Samuel | `PanelUsuarios`, `PanelReservas`, CLI (`--demo`, `--consola`) y ensamblaje |
+| `feature/HU-04-visitas` | Juan José | Registro de visitas, fecha opcional, prevención de duplicados y calendario gregoriano |
+| `feature/HU-05-estadisticas` | Juan José | Horario/carrera pico, promedio de duración y ranking de maquinaria |
+| `feature/HU-06-interfaz-visitas-estadisticas` | Juan José | `PanelVisitas`, `PanelEstadisticas` e integración visual con `matplotlib` |
+| `feature/HU-07-consultas-reserva` | Angelina | Titularidad, resumen de reserva y disponibilidad con ocupantes de franja |
+| `feature/HU-08-prioridades` | Angelina | Cupos preferenciales por fidelidad, límite de 2 horas y caducidad |
+| `feature/HU-09-interfaz-diseno` | Angelina | `VentanaPrincipal`, `componentes.py`, `PanelPrioridades` y UML v2 |
 
-| Rama | Responsable |
-| --- | --- |
-| feature/HU-01-usuarios | Samuel |
-| feature/HU-02-reservas | Samuel |
-| feature/HU-03-interfaz-ensamblaje | Samuel |
-| feature/HU-04-visitas | Juan José |
-| feature/HU-05-estadisticas | Juan José |
-| feature/HU-06-interfaz-visitas-estadisticas | Juan José |
-| feature/HU-07-consultas-reserva | Angelina |
-| feature/HU-08-prioridades | Angelina |
-| feature/HU-09-interfaz-diseno | Angelina |
+### 3.2 Commits atómicos y verificación continua
+- Commits granulares con formato convencional: `feat(reservas): validar aforo maximo de 15 usuarios`, `fix(prioridades): purgar cupos no confirmados a 2 horas`, `test(visitas): validar prevencion de visitas duplicadas`.
+- Antes de cada integración se ejecuta la suite automatizada: `python -m unittest test_gym.py -v` y la verificación de flujo: `python main.py --consola`.
 
-### 3.2 Commits pequeños y prueba previa
+### 3.3 Revisión cruzada obligatoria
+Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión garantiza conocimiento cruzado:
+- Samuel es revisado por Angelina.
+- Juan José es revisado por Samuel.
+- Angelina es revisada por Juan José.
 
-- Un commit por método, clase o regla terminada, no uno gigante al final.
-- Formato `tipo(ámbito): descripción` con los tipos `feat`, `fix`, `test`, `docs` y `refactor`. Ejemplos: `feat(reservas): validar una sola reserva activa por fecha`, `fix(prioridades): liberar cupo si pasaron 2 horas`, `test(visitas): rechazar duración cero`.
-- Antes de cada commit se ejecuta `python -m unittest` y `python main.py --consola`. Si algo falla, no se hace commit.
-- Así, ante una regresión se identifica el commit responsable y se revierte sin perder el resto.
+---
 
-### 3.3 Pull request con descripción completa
-
-Al terminar los criterios de aceptación de la historia, se hace `git push origin <rama>` y se abre un pull request hacia `main`. La descripción incluye:
-
-- Qué historia de usuario y qué requisitos atiende.
-- Qué clases, métodos y excepciones se agregaron o modificaron.
-- Qué pruebas se ejecutaron y su resultado (salida de `python -m unittest`).
-- Una captura de pantalla, si la historia toca la interfaz.
-
-### 3.4 Revisión cruzada obligatoria
-
-Nadie fusiona su propio pull request. La revisión rota para que los tres conozcan todo el código, lo que ayuda en la sustentación:
-
-| Autor del PR | Lo revisa y fusiona |
-| --- | --- |
-| Samuel | Angelina |
-| Juan José | Samuel |
-| Angelina | Juan José |
-
-El revisor verifica que:
-
-- Los nombres coinciden con el documento de análisis y con los demódulos.
-- Cada regla violada lanza la excepción correcta de `excepciones.py`.
-- No hay lógica de negocio en la interfaz.
-- Las pruebas pasan y cubren los criterios de aceptación.
-- Hay docstrings y los commits son atómicos y claros.
-
-### 3.5 Definición de terminado
-
-Una historia está terminada cuando:
-
-- [ ] Cumple todos sus criterios de aceptación.
-- [ ] Tiene pruebas unitarias que pasan.
-- [ ] Su PR fue revisado y fusionado por otra persona.
-- [ ] El documento de análisis sigue coincidiendo con el código.
-- [ ] Quien la hizo puede explicarla sin mirar el código.
-
-## 4. Historias de usuario y listas de tareas
+## 4. Historias de Usuario y Criterios de Aceptación
 
 ### Responsable 1: Samuel Zapata Trujillo
+**Módulo:** Usuarios, Reservas, Aforo y Ensamblaje
 
-**Módulo:** Usuarios, Reservas y ensamblaje
-
-**HU-01: Registro y eliminación de usuarios** (5 puntos)
-
-- **Como:** administrador del gimnasio.
-- **Quiero:** registrar usuarios con sus datos académicos y eliminarlos junto con todo lo que les pertenece.
-- **Para:** tener un registro único y limpio de quiénes usan el gimnasio.
+#### HU-01: Registro y eliminación de usuarios (5 puntos)
+- **Como:** Administrador del gimnasio.
+- **Quiero:** Registrar estudiantes con sus datos académicos y darlos de baja junto con sus registros asociados.
+- **Para:** Mantener un censo oficial, limpio y sin duplicados en las instalaciones deportivas.
 - **Requisitos:** R1, R2.
+- **Criterios de aceptación:**
+  1. El documento es único; un documento repetido lanza `UsuarioYaRegistradoError` sin alterar el repositorio.
+  2. Nombre, documento o programa vacíos (o solo espacios) lanzan `DatoVacioError`.
+  3. Eliminar con datos erróneos o inexistentes lanza `UsuarioNoRegistradoError`.
+  4. Al eliminar un usuario por coincidencia de nombre y documento, se eliminan en cascada sus reservas, visitas y prioridades.
+  5. Saneamiento automático de espacios en blanco (`strip()`).
 
-Criterios de aceptación:
-
-- Registrar un documento ya existente lanza `UsuarioYaRegistradoError` y no modifica nada.
-- Un nombre, documento o programa vacío lanza `DatoVacioError`.
-- Eliminar con nombre y documento que no coinciden lanza `UsuarioNoRegistradoError`.
-- Al eliminar un usuario se eliminan también sus reservas, visitas y prioridades.
-
-Lista de tareas:
-
-- [ ] Clase `Usuario` con validación en `__post_init__`.
-- [ ] `UsuarioRepositorio` (abstracto) y `UsuarioRepositorioMemoria`.
-- [ ] `registrar_usuario` y `eliminar_usuario` en `GymService`.
-- [ ] Pruebas: duplicado, vacíos, nombre que no coincide y eliminación en cascada.
-
-*Guía:* el documento se guarda sin espacios sobrantes (`strip`) para que `1004` y ` 1004  ` no cuenten como usuarios distintos.
-
-**HU-02: Reservas de cupos** (8 puntos)
-
-- **Como:** usuario del gimnasio.
-- **Quiero:** reservar, cancelar y reactivar un cupo por fecha y horario.
-- **Para:** planear mi rutina sin enviar correos.
+#### HU-02: Reservas de cupos y control de aforo (8 puntos)
+- **Como:** Usuario del gimnasio.
+- **Quiero:** Reservar, cancelar y reactivar turnos en la agenda del gimnasio.
+- **Para:** Asegurar mi espacio de entrenamiento sin depender de correos electrónicos.
 - **Requisitos:** R3, R7, R8.
+- **Criterios de aceptación:**
+  1. Cada franja horaria admite hasta 15 usuarios concurrentes. Si se intenta reservar en una franja con 15 ocupantes, lanza `CupoLlenoError`.
+  2. Un usuario no puede tener más de una reserva activa en la misma fecha (`ReservaDuplicadaError`).
+  3. Horarios no oficiales lanzan `HorarioInvalidoError`; fechas erróneas o irreales lanzan `FechaInvalidaError`.
+  4. Quien ya cuenta con prioridad para la franja tiene su cupo garantizado; no requiere ni puede crear otra reserva (`ReservaDuplicadaError`).
+  5. Cancelar una reserva activa libera inmediatamente 1 cupo para los demás usuarios. Si ya estaba cancelada, notifica sin generar error.
+  6. Confirmar (reactivar) una reserva previamente cancelada verifica que la franja no esté llena (`CupoLlenoError`) y que el usuario no tenga otra reserva activa ese día.
 
-Criterios de aceptación:
+#### HU-03: Interfaz de usuarios y reservas, y ensamblaje general (5 puntos)
+- **Como:** Usuario y administrador del sistema.
+- **Quiero:** Paneles gráficos para gestionar usuarios y reservas, y un punto de entrada flexible.
+- **Para:** Operar el gimnasio intuitivamente y validar su funcionamiento en diferentes entornos.
+- **Requisitos:** R1, R2, R3, R7, R8 (pantallas P1 y P2), ensamblaje en `main.py`.
+- **Criterios de aceptación:**
+  1. `PanelUsuarios` permite registrar y eliminar (con diálogo de confirmación) y refresca la tabla.
+  2. `PanelReservas` permite reservar, cancelar, reactivar, consultar titularidad y ver resumen.
+  3. `main.py` soporta ejecución estándar (`python main.py`), con datos precargados (`--demo`) y flujo automatizado (`--consola`).
+  4. Todo error de negocio se muestra en diálogo modal sin abortar el proceso.
 
-- Una reserva válida responde con el mensaje de éxito y el tiempo máximo de la sesión.
-- Un usuario no puede tener dos reservas activas en la misma fecha (`ReservaDuplicadaError`).
-- Un horario fuera de la lista lanza `HorarioInvalidoError`; una fecha inválida, `FechaInvalidaError`.
-- Un cupo apartado con prioridad por otro usuario lanza `CupoApartadoError`.
-- Cancelar o confirmar una reserva que ya está en ese estado no cambia nada y lo informa.
-- Si existe una reserva cancelada y otra activa con los mismos datos, cancelar actúa sobre la activa.
-- Reactivar una reserva respeta la regla de una reserva activa por fecha y el cupo exclusivo.
-
-Lista de tareas:
-
-- [ ] Clase `Reserva` con `cancelar()`, `confirmar()`, `coincide_con()` y `mostrar_resumen()`.
-- [ ] `ReservaRepositorio` y `ReservaRepositorioMemoria` (incluye `buscar` y `eliminar_por_documento`).
-- [ ] `realizar_reserva`, `cancelar_reserva` y `confirmar_reserva`.
-- [ ] Pruebas de cada criterio, incluida la reserva cancelada y vuelta a crear.
-
-*Guía:* el orden de las validaciones de `realizar_reserva` es: usuario, fecha, liberar prioridades vencidas, horario, prioridad de otro, reserva activa. Así coincide con la sección 3.1 del documento.
-
-**HU-03: Interfaz de usuarios y reservas, y ensamblaje** (5 puntos)
-
-- **Como:** administrador y usuario.
-- **Quiero:** una ventana donde registrar usuarios y manejar reservas, y un punto de entrada que arme todo.
-- **Para:** usar el sistema sin conocer el código.
-- **Requisitos:** R1, R2, R3, R7, R8 (pantallas P1 y P2).
-
-Criterios de aceptación:
-
-- `PanelUsuarios` registra y elimina (con confirmación) y muestra la tabla de usuarios.
-- `PanelReservas` reserva, cancela y confirma, y muestra las reservas registradas.
-- Todo error se muestra en un cuadro de diálogo y la aplicación no se cierra.
-- `python main.py` abre la interfaz, `--demo` carga datos de ejemplo y `--consola` corre el flujo de punta a punta.
-
-Lista de tareas:
-
-- [ ] `PanelUsuarios` y `PanelReservas` usando `PanelBase.ejecutar`.
-- [ ] `main.py`: `crear_servicio`, `cargar_datos_demo` y `flujo_consola` con `try/except GymError`.
-- [ ] Integrar los paneles de los otros dos módulos cuando estén fusionados.
-- [ ] `README.md` con instrucciones de ejecución.
-
-*Guía:* el panel nunca valida reglas; solo lee los campos, llama al servicio y muestra el mensaje o el error.
+---
 
 ### Responsable 2: Juan José Aguirre Durango
+**Módulo:** Visitas, Calendario y Estadísticas
 
-**Módulo:** Visitas y Estadísticas
-
-**HU-04: Registro de visitas y validación de fechas** (5 puntos)
-
-- **Como:** encargado del gimnasio.
-- **Quiero:** registrar cada visita con su horario, duración y equipos usados.
-- **Para:** tener datos reales de afluencia en lugar de correos dispersos.
+#### HU-04: Registro de visitas y calendario gregoriano (5 puntos)
+- **Como:** Encargado del gimnasio.
+- **Quiero:** Registrar la asistencia real de cada estudiante indicando horario, duración y maquinaria utilizada.
+- **Para:** Cuantificar el flujo real de deportistas y alimentar los modelos estadísticos.
 - **Requisitos:** R4.
+- **Criterios de aceptación:**
+  1. Validación matemática de años bisiestos y días por mes (`es_bisiesto` y `es_fecha_valida`).
+  2. El parámetro `fecha` es opcional; si no se especifica, toma la fecha actual del sistema.
+  3. Duración debe ser un entero positivo (>0 minutos); valores negativos, cero, no numéricos o booleanos lanzan `DuracionInvalidaError`.
+  4. Un mismo estudiante no puede registrar dos visitas en la misma fecha y franja horaria (`VisitaDuplicadaError`).
+  5. Las visitas se contabilizan en el aforo de 15 personas de la franja (`CupoLlenoError` si está llena). Quien tiene reserva y visita en el mismo turno cuenta una sola vez.
+  6. Limpieza y saneamiento de la lista de equipos utilizados.
 
-Criterios de aceptación:
-
-- `es_fecha_valida` acepta `2024-02-29` y rechaza `2025-02-29`, `2025/06/15` y `2025-13-01`.
-- Una duración menor o igual a 0, o no entera, lanza `DuracionInvalidaError`.
-- Un documento no registrado lanza `UsuarioNoRegistradoError`; un horario inválido, `HorarioInvalidoError`.
-- La lista de equipos se guarda sin textos vacíos ni espacios sobrantes.
-
-Lista de tareas:
-
-- [ ] `es_bisiesto` y `es_fecha_valida` en `modelos.py`.
-- [ ] Clase `Visita` con validación en `__post_init__`.
-- [ ] `VisitaRepositorio` y `VisitaRepositorioMemoria`.
-- [ ] `registrar_visita` en `GymService` y sus pruebas.
-
-*Guía:* `True` y `False` son enteros en Python; la validación de duración debe excluirlos explícitamente.
-
-**HU-05: Estadísticas de uso** (8 puntos)
-
-- **Como:** encargado del gimnasio.
-- **Quiero:** conocer horarios pico, programas más frecuentes, tiempo promedio y equipos más usados.
-- **Para:** tomar decisiones sobre el espacio y el desgaste de las máquinas.
+#### HU-05: Estadísticas de uso y analítica deportiva (8 puntos)
+- **Como:** Encargado y analista del gimnasio.
+- **Quiero:** Conocer horarios pico, programas más frecuentes, tiempo promedio por usuario y ranking de maquinaria.
+- **Para:** Tomar decisiones sobre mantenimiento de máquinas y optimización de espacios.
 - **Requisitos:** R5, R6, R11, R15.
+- **Criterios de aceptación:**
+  1. `horario_mas_frecuente` y `programa_mas_frecuente` devuelven la moda estadística, o mensaje claro si no hay datos.
+  2. `promedio_duracion_por_usuario` calcula la media en minutos por usuario con un decimal.
+  3. `datos_promedio_duracion` genera las tuplas numéricas ordenadas descendentemente para alimentar tablas y gráficos.
+  4. `equipo_mas_utilizado` y `ranking_equipos` consolidan el uso de maquinaria normalizando nombres (insensible a mayúsculas/minúsculas).
 
-Criterios de aceptación:
-
-- `horario_mas_frecuente` y `programa_mas_frecuente` devuelven el valor con más apariciones, o un aviso si no hay datos.
-- `promedio_duracion_por_usuario` muestra el promedio en minutos con un decimal, por usuario.
-- `equipo_mas_utilizado` ordena los equipos de mayor a menor y cuenta una vez por visita, sin distinguir mayúsculas.
-- Los datos para los gráficos salen de `datos_promedio_duracion` y `ranking_equipos`.
-
-Lista de tareas:
-
-- [ ] Los cuatro métodos de estadística en `GymService`.
-- [ ] Los dos métodos de datos que usan los gráficos.
-- [ ] Pruebas con datos conocidos y con el sistema vacío.
-
-*Guía:* verifica a mano un promedio (por ejemplo 40 y 60 minutos dan 50,0) antes de escribir la prueba.
-
-**HU-06: Interfaz de visitas y estadísticas** (5 puntos)
-
-- **Como:** encargado del gimnasio.
-- **Quiero:** registrar visitas desde una pantalla y ver las estadísticas con gráficos.
-- **Para:** consultar la información de un vistazo.
+#### HU-06: Interfaz de visitas y visualización analítica (5 puntos)
+- **Como:** Encargado del gimnasio.
+- **Quiero:** Una pantalla de captura rápida de visitas y un panel analítico con gráficos interactivos.
+- **Para:** Monitorear el gimnasio en tiempo real.
 - **Requisitos:** R4, R5, R6, R11, R15 (pantallas P3 y P5).
+- **Criterios de aceptación:**
+  1. `PanelVisitas` ofrece casillas para equipos usuales y campo para máquinas adicionales.
+  2. `PanelEstadisticas` muestra tarjetas de indicadores principales y dos gráficos de barras embebidos con `matplotlib` (duración media y ranking de equipos).
+  3. Ante la ausencia de datos o de la librería `matplotlib`, el panel despliega avisos amigables sin generar excepciones no controladas.
 
-Criterios de aceptación:
-
-- `PanelVisitas` permite elegir equipos de una lista o escribir otros, y muestra la tabla de visitas.
-- `PanelEstadisticas` muestra el horario y el programa más frecuentes y dos gráficos de barras con `matplotlib`.
-- Un campo de duración que no es número muestra un mensaje claro.
-- Sin datos, los gráficos muestran «Sin datos» y no fallan.
-
-Lista de tareas:
-
-- [ ] `PanelVisitas` y `PanelEstadisticas`.
-- [ ] `requirements.txt` con las librerías externas.
-- [ ] Probar la pantalla con `python main.py --demo`.
-
-*Guía:* si `matplotlib` no está instalado, el panel debe mostrar un texto y no romper la aplicación.
+---
 
 ### Responsable 3: Angelina Negrette Diaz
+**Módulo:** Prioridades, Consultas y Diseño de Interfaz
 
-**Módulo:** Prioridades, Consultas de reserva y Diseño
-
-**HU-07: Consultas de reserva y disponibilidad** (5 puntos)
-
-- **Como:** usuario del gimnasio.
-- **Quiero:** ver si tengo reserva, su resumen y qué horarios están libres en una fecha.
-- **Para:** no escribir mensajes a ciegas cuando la franja ya está ocupada.
+#### HU-07: Consultas de titularidad, resumen y disponibilidad (5 puntos)
+- **Como:** Usuario del gimnasio.
+- **Quiero:** Saber si tengo reservas, consultar su resumen y revisar qué horarios tienen cupos libres.
+- **Para:** Evitar traslados innecesarios y planificar mis entrenamientos con certeza.
 - **Requisitos:** R9, R10, R14.
+- **Criterios de aceptación:**
+  1. `verificar_propietario_reserva` retorna «Sí» o «No» según la existencia de registros del documento.
+  2. `mostrar_resumen_reserva` entrega la síntesis de la reserva más relevante; si no hay reservas, lanza `ReservaNoEncontradaError`.
+  3. `consultar_disponibilidad` reporta cada horario con su estado: `LIBRE` (0/15), `PARCIAL` (1..14/15 con detalle de cupos libres) o `LLENO` (15/15).
+  4. `ocupantes_franja` desglosa quiénes ocupan la franja seleccionada y bajo qué rol (Reserva, Visita o Prioridad).
+  5. En `PanelReservas`, al hacer clic en una franja de la tabla de disponibilidad, se actualiza automáticamente la tabla de ocupantes contigua.
 
-Criterios de aceptación:
-
-- `verificar_propietario_reserva` devuelve «Sí» si hay al menos una reserva del documento y «No» si no.
-- `mostrar_resumen_reserva` muestra usuario, documento, fecha, horario y estado de la reserva más reciente; si no existe, lanza `ReservaNoEncontradaError`.
-- `consultar_disponibilidad` devuelve, para cada horario, si está libre, reservado o apartado con prioridad (y por quién).
-- Una fecha inválida lanza `FechaInvalidaError`.
-
-Lista de tareas:
-
-- [ ] Los tres métodos en `GymService`.
-- [ ] Pruebas de los tres estados de disponibilidad.
-- [ ] Entregar a Samuel el formato de lo que devuelve R14 para su tabla.
-
-*Guía:* libera las prioridades vencidas antes de calcular la disponibilidad, o un cupo caducado aparecerá como apartado.
-
-**HU-08: Prioridad de membresía** (8 puntos)
-
-- **Como:** usuario habitual del gimnasio.
-- **Quiero:** apartar un cupo con exclusividad y confirmar mi asistencia a tiempo.
-- **Para:** tener garantizado mi horario de siempre.
+#### HU-08: Sistema dinámico de prioridades de membresía (8 puntos)
+- **Como:** Usuario habitual o constante del gimnasio.
+- **Quiero:** Apartar un cupo con exclusividad temporal para asegurar mi turno preferido.
+- **Para:** Premiar mi fidelidad y disciplina deportiva.
 - **Requisitos:** R12, R13.
+- **Criterios de aceptación:**
+  1. Se otorga prioridad si el usuario es "habitual" (≥3 visitas en ese mismo horario) o si acumula estrictamente más minutos que todos los demás usuarios (sin empates).
+  2. Si no cumple los criterios de fidelidad, lanza `PrioridadNoCumpleError`.
+  3. No puede solicitarse prioridad con menos de 2 horas de anticipación a la franja deseada (`PrioridadNoCumpleError`).
+  4. La prioridad aparta 1 cupo garantizado (sujeto al aforo máximo de 15 personas). Otros estudiantes pueden continuar reservando los cupos restantes de la franja.
+  5. La prioridad debe confirmarse con 2 o más horas de antelación (`confirmada = True`). Si se intenta confirmar tarde, la prioridad se purga y el cupo se libera de forma automática.
+  6. `listar_prioridades_vigentes` depura automáticamente las prioridades caducadas antes de listarlas.
 
-Criterios de aceptación:
+#### HU-09: Ventana principal, navegación y componentes base (5 puntos)
+- **Como:** Usuario del sistema.
+- **Quiero:** Una interfaz gráfica organizada en pestañas, selectores amigables y un diseño documentado en UML.
+- **Para:** Navegar por todos los módulos del gimnasio con facilidad y claridad visual.
+- **Requisitos:** P1 a P5, `VentanaPrincipal`, `componentes.py`, diagrama de clases UML.
+- **Criterios de aceptación:**
+  1. `VentanaPrincipal` integra el cuaderno de pestañas (`ttk.Notebook`) y refresca automáticamente los paneles al seleccionarlos.
+  2. `componentes.py` estandariza `PanelBase`, `TablaDatos` con scrollbar, `SelectorFecha` (con fallback de `tkcalendar`) y `SelectorHorario`.
+  3. Diagrama de clases UML actualizado reflejando la arquitectura por capas, las entidades, `GymService`, repositorios y la jerarquía de 12 excepciones.
 
-- Es habitual quien tiene 3 o más visitas en ese horario, o quien acumula estrictamente más minutos que todos los demás; un empate no cuenta.
-- Quien no cumple lanza `PrioridadNoCumpleError`; un cupo ya apartado, `CupoApartadoError`.
-- No se puede pedir prioridad si faltan menos de 2 horas para el horario.
-- Confirmar con 2 horas o más de antelación deja el cupo exclusivo; después de ese límite la prioridad se elimina y el cupo se libera.
-- Una prioridad que no existe lanza `PrioridadNoEncontradaError`.
-- Una prioridad confirmada no vence.
+---
 
-Lista de tareas:
+## 5. Dependencias y Orden de Integración
 
-- [ ] Clase `Prioridad` con `limite_confirmacion()`, `esta_vencida()` y `confirmar()`.
-- [ ] `PrioridadRepositorio` y `PrioridadRepositorioMemoria`.
-- [ ] `prioridad_membresia`, `confirmar_prioridad` y `_liberar_prioridades_vencidas`.
-- [ ] Pruebas con horas fijas: justo en el límite, un minuto después, empate de tiempo.
+```text
+       ┌──────────────┐     ┌──────────────┐
+       │ HU-01 (Samuel)│     │HU-04(Juan Jo)│
+       │   Usuarios   │     │   Visitas    │
+       └──────┬───────┘     └──────┬───────┘
+              │                    │
+              ├──────────┬─────────┤
+              ▼          ▼         ▼
+       ┌──────────────┐  │  ┌──────────────┐
+       │ HU-02 (Samuel)│  │  │HU-05(Juan Jo)│
+       │   Reservas   │  │  │ Estadísticas │
+       └──────┬───────┘  │  └──────────────┘
+              │          ▼
+              │   ┌──────────────┐
+              │   │HU-08(Angelina│
+              │   │ Prioridades  │
+              │   └──────┬───────┘
+              ▼          ▼
+       ┌─────────────────────────┐
+       │    HU-07 (Angelina)     │
+       │Consultas, Disponibilidad│
+       └────────────┬────────────┘
+                    ▼
+       ┌─────────────────────────┐
+       │  HU-03 / HU-06 / HU-09  │
+       │Interfaz Gráfica Integral│
+       └─────────────────────────┘
+```
 
-*Guía:* usa siempre una `hora_actual` fija en las pruebas. El límite exacto (2 horas antes) todavía se acepta; un minuto después ya no.
+1. **Fase 1 (Paralela):** HU-01 (Usuarios) y HU-04 (Visitas y validación de calendario).
+2. **Fase 2:** HU-02 (Reservas y aforo de 15 cupos), HU-05 (Estadísticas analíticas) y HU-08 (Prioridades de membresía).
+3. **Fase 3:** HU-07 (Consultas de titularidad, resumen y disponibilidad con ocupantes).
+4. **Fase 4 (Ensamblaje final):** HU-03, HU-06 y HU-09 (Integración en `VentanaPrincipal`, componentes reutilizables, CLI y datos demo).
 
-**HU-09: Ventana principal, prioridades y diseño** (5 puntos)
+---
 
-- **Como:** usuario del sistema.
-- **Quiero:** una ventana con pestañas, una pantalla para prioridades y un diseño documentado.
-- **Para:** navegar el sistema fácilmente y que el diseño sea claro.
-- **Requisitos:** R12, R13 (pantalla P4) y el diagrama de clases.
+## 6. Plan de Verificación y Validación Conjunta
 
-Criterios de aceptación:
+La verificación del sistema se realiza en dos etapas formales:
 
-- `VentanaPrincipal` agrega una pestaña por panel y los refresca al cambiar de pestaña.
-- `PanelPrioridades` solicita y confirma prioridad y muestra la lista con su límite de confirmación y su estado.
-- `componentes.py` ofrece la base de los paneles, las tablas y los selectores de fecha y horario.
-- El diagrama de clases v2 muestra `GymService`, los repositorios, las excepciones y los paneles, y su enlace está en el documento.
+### Etapa 1: Suite Automatizada de Pruebas Unitarias (55 tests)
+Ejecución: `python -m unittest test_gym.py -v`
+- [x] 14 pruebas de aforo y concurrencia (`TestCapacidadPorFranja`).
+- [x] 11 pruebas de prioridades y caducidad temporal (`TestPrioridades`).
+- [x] 7 pruebas de ciclo de vida de reservas (`TestReservas`).
+- [x] 7 pruebas de gestión y purga en cascada de usuarios (`TestUsuarios`).
+- [x] 6 pruebas de visitas, fechas gregorianas y años bisiestos (`TestVisitasYFechas`).
+- [x] 4 pruebas de analítica y métricas estadísticas (`TestEstadisticas`).
+- [x] 3 pruebas de consultas y disponibilidad (`TestConsultasYDisponibilidad`).
+- [x] 3 pruebas de saneamiento de espacios y purga reactiva (`TestEspaciosEnFechasYPrioridadesVigentes`).
 
-Lista de tareas:
-
-- [ ] `VentanaPrincipal`, `componentes.py` y `PanelPrioridades`.
-- [ ] Dibujar el diagrama de clases v2 y actualizar el enlace.
-- [ ] Revisar que las secciones 3.1 a 3.5 del documento coincidan con el código.
-
-*Guía:* el selector de fecha usa `tkcalendar` si está instalado y un campo de texto AAAA-MM-DD si no.
-
-## 5. Dependencias y orden de integración
-
-| Historia | Depende de |
-| --- | --- |
-| HU-01 y HU-04 | Nada; se hacen primero, en paralelo |
-| HU-02 | HU-01 (necesita Usuario) |
-| HU-05 | HU-01 y HU-04 (usuarios y visitas) |
-| HU-08 | HU-01 y HU-04 (Usuario y Visita para saber si es habitual) |
-| HU-07 | HU-02 y HU-08 (reservas y prioridades) |
-| HU-03, HU-06, HU-09 | Los métodos de servicio que cada pantalla invoca |
-
-Orden de fusión a `main`: primero HU-01 y HU-04; después HU-02, HU-05 y HU-08; luego HU-07; al final las tres historias de interfaz.
-
-## 6. Plan de integración y validación conjunta
-
-Cuando los módulos estén fusionados, los tres se reúnen y recorren esta lista con `python main.py --consola` y después con la interfaz (`python main.py --demo`):
-
-- [ ] **Paso 1 (Samuel y Juan José):** registrar dos usuarios, registrar visitas y verificar que una duración de 0 lance el error esperado.
-- [ ] **Paso 2 (Samuel):** reservar un horario, intentar una segunda reserva el mismo día y comprobar el error.
-- [ ] **Paso 3 (Juan José y Angelina):** con tres visitas en un horario, solicitar prioridad y confirmarla.
-- [ ] **Paso 4 (Angelina y Samuel):** intentar reservar el cupo apartado con otro usuario y comprobar `CupoApartadoError`.
-- [ ] **Paso 5 (Angelina):** confirmar una prioridad pasado el límite y verificar que el cupo queda libre.
-- [ ] **Paso 6 (Juan José):** revisar horario más frecuente, promedio por usuario y ranking de equipos.
-- [ ] **Paso 7 (los tres):** eliminar un usuario y comprobar que desaparecen sus reservas, visitas y prioridades.
-- [ ] **Paso 8 (los tres):** abrir cada pantalla, provocar un error y verificar que aparece el cuadro de diálogo sin cerrar la aplicación.
+### Etapa 2: Recorrido del Flujo de Punta a Punta en Consola e Interfaz
+Ejecución: `python main.py --consola` seguido de `python main.py --demo`
+- [x] **Paso 1 (Samuel y Juan José):** Registrar usuarios, validar unicidad de documento, registrar visitas con fecha explícita u omitida, comprobar `DuracionInvalidaError` (≤0) y `VisitaDuplicadaError`.
+- [x] **Paso 2 (Samuel):** Realizar reserva, validar límite de 1 reserva activa por fecha (`ReservaDuplicadaError`), cancelar y confirmar reactivación.
+- [x] **Paso 3 (Juan José y Angelina):** Registrar ≥3 visitas en un mismo horario, solicitar prioridad de membresía y confirmar con antelación superior a 2 horas.
+- [x] **Paso 4 (Angelina y Samuel):** Comprobar que otros usuarios pueden reservar en la misma franja mientras haya cupos libres (< 15).
+- [x] **Paso 5 (Angelina):** Intentar confirmar una prioridad pasada la ventana de 2 horas previas y comprobar la liberación automática del cupo.
+- [x] **Paso 6 (Samuel):** Llenar una franja con 15 usuarios (combinando reservas, visitas y prioridades) y comprobar que el intento 16 lanza `CupoLlenoError`.
+- [x] **Paso 7 (Juan José):** Consultar horario pico, programa académico más frecuente, duración media por usuario y ranking ordenado de maquinaria deportiva.
+- [x] **Paso 8 (Angelina):** Consultar disponibilidad (LIBRE, PARCIAL, LLENO) y seleccionar una franja para inspeccionar la tabla de ocupantes en tiempo real.
+- [x] **Paso 9 (Samuel):** Eliminar un usuario con reservas, visitas y prioridades activas, y verificar que todas sus entidades son purgadas en cascada de forma inmediata.
+- [x] **Paso 10 (Los tres):** Abrir cada pestaña en la interfaz gráfica (`python main.py`), provocar intencionalmente errores de negocio y verificar que se interceptan mediante diálogos modales sin cerrar la aplicación.

@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 from excepciones import (
     CupoApartadoError,
-    DuracionInvalidaError,
     FechaInvalidaError,
     HorarioInvalidoError,
     PrioridadNoCumpleError,

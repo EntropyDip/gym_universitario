@@ -123,9 +123,3 @@ class SelectorHorario(ttk.Frame):
     def obtener(self) -> str:
         """Devuelve el horario seleccionado."""
         return self.variable.get().strip()
-
-    def obtener(self) -> str:
-        """Devuelve la fecha seleccionada en formato AAAA-MM-DD."""
-        if self.usa_tkcalendar:
-            return str(self.calendario.get_date().strftime("%Y-%m-%d"))
-        return self.entrada.get().strip()

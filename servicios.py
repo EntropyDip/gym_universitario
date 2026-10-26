@@ -11,6 +11,7 @@ from excepciones import (
     ReservaNoEncontradaError,
     UsuarioNoRegistradoError,
     UsuarioYaRegistradoError,
+    VisitaDuplicadaError,
 )
 from modelos import Prioridad, Reserva, Usuario, Visita, es_fecha_valida
 
@@ -145,6 +146,14 @@ class GymService:
         self._validar_fecha(fecha_visita)
 
         nueva_visita = Visita(doc_limpio, horario, duracion, equipos, fecha_visita)
+
+        # Un usuario no puede tener dos visitas en la misma fecha y horario
+        for v in self.listar_visitas():
+            if v.documento == doc_limpio and v.horario == horario and v.fecha == fecha_visita:
+                raise VisitaDuplicadaError(
+                    f"{usuario.nombre} ya tiene una visita registrada el "
+                    f"{fecha_visita} a las {horario}.")
+
         self._liberar_prioridades_vencidas(ahora)
         self._exigir_cupo(doc_limpio, horario, fecha_visita)
         if self.visitas is not None:

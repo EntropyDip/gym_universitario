@@ -152,7 +152,7 @@ class Prioridad:
     hora_solicitud: datetime
     confirmada: bool = False
 
-    def _post_init_(self) -> None:
+    def __post_init__(self) -> None:
         self.documento = str(self.documento).strip()
         self.nombre = str(self.nombre).strip()
         self.horario = str(self.horario).strip()

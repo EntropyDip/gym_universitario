@@ -296,15 +296,18 @@ class GymService:
                             hora_actual: datetime | None = None) -> str:
         """Otorga exclusividad sobre un cupo si es habitual (>=3) o acumula más tiempo (R12)."""
         doc_limpio = str(documento).strip()
+        horario_limpio = str(horario).strip() 
+        fecha_limpia = str(fecha).strip()    
+        
         usuario = self._exigir_usuario(doc_limpio)
-        self._validar_horario(horario)
-        self._validar_fecha(fecha)
+        self._validar_horario(horario_limpio) 
+        self._validar_fecha(fecha_limpia)     
 
         ahora = hora_actual or datetime.now()
         self._liberar_prioridades_vencidas(ahora)
 
         # Validar si faltan menos de 2 horas para el horario
-        hora_del_horario = datetime.strptime(f"{fecha} {horario}", "%Y-%m-%d %I:%M %p")
+        hora_del_horario = datetime.strptime(f"{fecha_limpia} {horario_limpio}", "%Y-%m-%d %I:%M %p")
         limite_minimo = hora_del_horario - timedelta(hours=self.horas_limite_confirmacion)
         if ahora > limite_minimo:
             raise PrioridadNoCumpleError(
@@ -312,17 +315,17 @@ class GymService:
                 f"{self.horas_limite_confirmacion} horas de antelación.")
 
         # Verificar si ya tiene prioridad o una reserva activa en la franja
-        if self._prioridad_del_usuario(doc_limpio, horario, fecha) is not None:
+        if self._prioridad_del_usuario(doc_limpio, horario_limpio, fecha_limpia) is not None:
             return (f"{usuario.nombre} ya tiene prioridad para el horario "
-                    f"{horario} del {fecha}.")
-        if self.reservas.buscar(doc_limpio, horario, fecha, activa=True) is not None:
+                    f"{horario_limpio} del {fecha_limpia}.")
+        if self.reservas.buscar(doc_limpio, horario_limpio, fecha_limpia, activa=True) is not None:
             raise ReservaDuplicadaError(
                 f"{usuario.nombre} ya tiene una reserva activa en ese horario; "
                 f"no necesita prioridad.")
 
         # Criterio 1: Usuario habitual en ese horario específico (>= 3 visitas registradas)
         visitas_usuario = [v for v in self.listar_visitas() if v.documento == doc_limpio]
-        veces_en_horario = sum(1 for v in visitas_usuario if v.horario == horario)
+        veces_en_horario = sum(1 for v in visitas_usuario if v.horario == horario_limpio)
         es_habitual = veces_en_horario >= self.min_visitas_habitual
 
         # Criterio 2: Mayor tiempo total acumulado (estricto, sin empates)
@@ -340,15 +343,15 @@ class GymService:
         if not es_habitual and not tiene_mas_tiempo:
             raise PrioridadNoCumpleError(
                 f"{usuario.nombre} no cumple los requisitos para tener prioridad "
-                f"en el horario {horario} (requiere >={self.min_visitas_habitual} "
+                f"en el horario {horario_limpio} (requiere >={self.min_visitas_habitual} "
                 f"visitas en ese horario o mayor tiempo total acumulado).")
 
-        self._exigir_cupo(doc_limpio, horario, fecha)
-        nueva_prioridad = Prioridad(doc_limpio, usuario.nombre, horario, fecha, ahora)
+        self._exigir_cupo(doc_limpio, horario_limpio, fecha_limpia)
+        nueva_prioridad = Prioridad(doc_limpio, usuario.nombre, horario_limpio, fecha_limpia, ahora)
         if self.prioridades is not None:
             self.prioridades.agregar(nueva_prioridad)
 
-        return (f"{usuario.nombre} obtuvo prioridad para el horario {horario} del {fecha}. "
+        return (f"{usuario.nombre} obtuvo prioridad para el horario {horario_limpio} del {fecha_limpia}. "
                 f"Tiene hasta 2 horas antes del horario para confirmar su asistencia.")
 
     def confirmar_prioridad(self, documento: str, horario: str, fecha: str,
@@ -461,4 +464,3 @@ class GymService:
         vencidas = [p for p in self.prioridades.listar() if p.esta_vencida(hora_actual)]
         for p in vencidas:
             self.prioridades.eliminar(p)
-

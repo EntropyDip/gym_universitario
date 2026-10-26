@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 
 from excepciones import (
-    CupoApartadoError,
+    CupoLlenoError,
     FechaInvalidaError,
     HorarioInvalidoError,
     PrioridadNoCumpleError,
@@ -20,7 +20,8 @@ class GymService:
 
     def __init__(self, usuarios, reservas, visitas=None, prioridades=None,
                 nombre: str = "Gimnasio universitario",
-                duracion_maxima_sesion: str = "1:30 horas") -> None:
+                duracion_maxima_sesion: str = "1:30 horas",
+                capacidad_maxima: int = 15) -> None:
         """Inicializa el servicio inyectando los repositorios correspondientes."""
         self.nombre = nombre
         self.horarios_disponibles: list[str] = [
@@ -29,7 +30,8 @@ class GymService:
         self.duracion_maxima_sesion = duracion_maxima_sesion
         self.min_visitas_habitual: int = 3
         self.horas_limite_confirmacion: int = 2
-
+        self.capacidad_maxima: int = capacidad_maxima
+                    
         self.usuarios = usuarios
         self.reservas = reservas
         self.visitas = visitas
@@ -64,29 +66,31 @@ class GymService:
         """Devuelve la lista de usuarios registrados."""
         return self.usuarios.listar()
 
-    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str, hora_actual: datetime | None = None) -> str:
+    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str,
+                         hora_actual: datetime | None = None) -> str:
         """Crea una reserva activa aplicando todas las validaciones de negocio (R3)."""
         doc_limpio = str(documento).strip()
+        horario_deseado = str(horario_deseado).strip()
+        fecha = str(fecha).strip()
         usuario = self._exigir_usuario(doc_limpio)
         self._validar_fecha(fecha)
-
         ahora = hora_actual or datetime.now()
         self._liberar_prioridades_vencidas(ahora)
         self._validar_horario(horario_deseado)
 
-        # Validar si el cupo está apartado con prioridad
-        prioridad = self._prioridad_del_cupo(horario_deseado, fecha)
-        if prioridad is not None:
-            if prioridad.documento != doc_limpio:
-                raise CupoApartadoError(
-                    f"El horario {horario_deseado} del {fecha} está apartado "
-                    f"con prioridad para {prioridad.nombre}.")
+
+        # Quien ya tiene prioridad en la franja tiene su cupo garantizado
+        if self._prioridad_del_usuario(doc_limpio, horario_deseado, fecha) is not None:
             raise ReservaDuplicadaError(
                 f"{usuario.nombre} ya tiene este horario apartado con prioridad. "
                 f"No es necesario hacer otra reserva.")
 
+
         # Validar que no tenga otra reserva activa en la misma fecha
         self._exigir_sin_reserva_activa(doc_limpio, usuario.nombre, fecha)
+
+        # Validar que la franja no haya alcanzado el máximo de usuarios
+        self._exigir_cupo(doc_limpio, horario_deseado, fecha)
 
         nueva_reserva = Reserva(doc_limpio, usuario.nombre, horario_deseado, fecha)
         self.reservas.agregar(nueva_reserva)
@@ -97,6 +101,8 @@ class GymService:
     def cancelar_reserva(self, documento: str, horario: str, fecha: str) -> str:
         """Cancela una reserva activa; si ya está cancelada lo notifica sin error (R7)."""
         doc_limpio = str(documento).strip()
+        horario = str(horario).strip()
+        fecha = str(fecha).strip()
         reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=True) or self.reservas.buscar(doc_limpio, horario, fecha))
         if reserva is None:
             raise ReservaNoEncontradaError("No existe una reserva con esos datos.")
@@ -105,6 +111,8 @@ class GymService:
     def confirmar_reserva(self, documento: str, horario: str, fecha: str, hora_actual: datetime | None = None) -> str:
         """Reactiva una reserva previamente cancelada (R8)."""
         doc_limpio = str(documento).strip()
+        horario = str(horario).strip()
+        fecha = str(fecha).strip()
         reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=False) or self.reservas.buscar(doc_limpio, horario, fecha))
         if reserva is None:
             raise ReservaNoEncontradaError("No se encontró una reserva con esos datos.")
@@ -114,29 +122,35 @@ class GymService:
         ahora = hora_actual or datetime.now()
         self._liberar_prioridades_vencidas(ahora)
 
-        prioridad = self._prioridad_del_cupo(horario, fecha)
-        if prioridad is not None and prioridad.documento != doc_limpio:
-            raise CupoApartadoError(
-                f"El horario {horario} del {fecha} está apartado "
-                f"con prioridad para {prioridad.nombre}.")
-
+        if self._prioridad_del_usuario(doc_limpio, horario, fecha) is not None:
+            raise ReservaDuplicadaError(
+                f"{reserva.nombre_usuario} ya tiene este horario apartado con prioridad.")
         self._exigir_sin_reserva_activa(doc_limpio, reserva.nombre_usuario, fecha)
+        
+        self._exigir_cupo(doc_limpio, horario, fecha)
         return reserva.confirmar()
 
     def listar_reservas(self) -> list[Reserva]:
         """Devuelve la lista de reservas registradas."""
         return self.reservas.listar()
 
-    def registrar_visita(self, documento: str, horario: str, duracion: int, equipos: list[str]) -> str:
+    def registrar_visita(self, documento: str, horario: str, duracion: int, equipos: list[str], fecha: str | None = None, hora_actual: datetime | None = None) -> str:
         """Registra la asistencia de un usuario con los equipos usados (R4)."""
         doc_limpio = str(documento).strip()
+        horario = str(horario).strip()
+        ahora = hora_actual or datetime.now()
+        fecha_visita = str(fecha).strip() if fecha else ahora.strftime("%Y-%m-%d")
         usuario = self._exigir_usuario(doc_limpio)
         self._validar_horario(horario)
+        self._validar_fecha(fecha_visita)
 
-        nueva_visita = Visita(doc_limpio, horario, duracion, equipos)
+        nueva_visita = Visita(doc_limpio, horario, duracion, equipos, fecha_visita)
+        self._liberar_prioridades_vencidas(ahora)
+        self._exigir_cupo(doc_limpio, horario, fecha_visita)
         if self.visitas is not None:
             self.visitas.agregar(nueva_visita)
         return f"Visita de {usuario.nombre} registrada correctamente."
+
 
     def listar_visitas(self) -> list[Visita]:
         """Devuelve la lista de visitas registradas."""
@@ -246,38 +260,37 @@ class GymService:
 
     def consultar_disponibilidad(self, fecha: str, hora_actual: datetime | None = None) -> list[tuple[str, str, str]]:
         """Retorna la disponibilidad detallada (libre, reservado, apartado) por horario (R14)."""
+        fecha = str(fecha).strip()
         self._validar_fecha(fecha)
-        ahora = hora_actual or datetime.now()
-        self._liberar_prioridades_vencidas(ahora)
+        self._liberar_prioridades_vencidas(hora_actual or datetime.now())
 
         resultados = []
         for horario in self.horarios_disponibles:
-            prioridad = self._prioridad_del_cupo(horario, fecha)
-            if prioridad is not None:
-                estado_p = "confirmada" if prioridad.confirmada else "pendiente"
-                resultados.append((
-                    horario,
-                    "apartado",
-                    f"Apartado ({estado_p}) por {prioridad.nombre} ({prioridad.documento})"
-                ))
-                continue
-
-            reserva_activa = None
-            for r in self.listar_reservas():
-                if r.horario == horario and r.fecha == fecha and r.activa:
-                    reserva_activa = r
-                    break
-
-            if reserva_activa is not None:
-                resultados.append((
-                    horario,
-                    "reservado",
-                    f"Reservado por {reserva_activa.nombre_usuario} ({reserva_activa.documento})"
-                ))
+            ocupados = len(self._ocupantes(horario, fecha))
+            libres = max(self.capacidad_maxima - ocupados, 0)
+            if ocupados == 0:
+                estado = "libre"
+            elif libres == 0:
+                estado = "lleno"
             else:
-                resultados.append((horario, "libre", "Cupo disponible"))
-
+                estado = "parcial"
+            resultados.append((
+                horario,
+                estado,
+                f"{ocupados}/{self.capacidad_maxima} usuarios · {libres} cupos libres"
+            ))
         return resultados
+        
+    def ocupantes_franja(self, fecha: str, horario: str,
+                         hora_actual: datetime | None = None) -> list[tuple[str, str, str]]:
+        """Lista (nombre, documento, participación) de quienes reservaron, visitaron o tienen prioridad (R14)."""
+        fecha = str(fecha).strip()
+        horario = str(horario).strip()
+        self._validar_fecha(fecha)
+        self._validar_horario(horario)
+        self._liberar_prioridades_vencidas(hora_actual or datetime.now())
+        return self._ocupantes(horario, fecha)
+
 
     def prioridad_membresia(self, documento: str, horario: str, fecha: str,
                             hora_actual: datetime | None = None) -> str:
@@ -298,15 +311,14 @@ class GymService:
                 f"No se puede solicitar prioridad con menos de "
                 f"{self.horas_limite_confirmacion} horas de antelación.")
 
-        # Verificar si ya está apartado
-        prioridad_existente = self._prioridad_del_cupo(horario, fecha)
-        if prioridad_existente is not None:
-            if prioridad_existente.documento == doc_limpio:
-                return (f"{usuario.nombre} ya tiene prioridad para el horario "
-                        f"{horario} del {fecha}.")
-            raise CupoApartadoError(
-                f"El horario {horario} del {fecha} ya está apartado con "
-                f"prioridad por {prioridad_existente.nombre}.")
+        # Verificar si ya tiene prioridad o una reserva activa en la franja
+        if self._prioridad_del_usuario(doc_limpio, horario, fecha) is not None:
+            return (f"{usuario.nombre} ya tiene prioridad para el horario "
+                    f"{horario} del {fecha}.")
+        if self.reservas.buscar(doc_limpio, horario, fecha, activa=True) is not None:
+            raise ReservaDuplicadaError(
+                f"{usuario.nombre} ya tiene una reserva activa en ese horario; "
+                f"no necesita prioridad.")
 
         # Criterio 1: Usuario habitual en ese horario específico (>= 3 visitas registradas)
         visitas_usuario = [v for v in self.listar_visitas() if v.documento == doc_limpio]
@@ -331,6 +343,7 @@ class GymService:
                 f"en el horario {horario} (requiere >={self.min_visitas_habitual} "
                 f"visitas en ese horario o mayor tiempo total acumulado).")
 
+        self._exigir_cupo(doc_limpio, horario, fecha)
         nueva_prioridad = Prioridad(doc_limpio, usuario.nombre, horario, fecha, ahora)
         if self.prioridades is not None:
             self.prioridades.agregar(nueva_prioridad)
@@ -360,13 +373,18 @@ class GymService:
 
         prioridad.confirmar()
         return (f"{prioridad.nombre} confirmó su asistencia. "
-                f"El cupo de las {horario} del {fecha} es exclusivo.")
+                f"El cupo de las {horario} del {fecha} queda garantizado.")
 
     def listar_prioridades(self) -> list[Prioridad]:
         """Devuelve la lista de prioridades registradas."""
         if self.prioridades is None:
             return []
         return self.prioridades.listar()
+
+    def listar_prioridades_vigentes(self, hora_actual: datetime | None = None) -> list[Prioridad]:
+        """Libera las prioridades vencidas y devuelve solo las vigentes (para la interfaz)."""
+        self._liberar_prioridades_vencidas(hora_actual or datetime.now())
+        return self.listar_prioridades()
 
     def _exigir_usuario(self, documento: str) -> Usuario:
         """Valida que el usuario exista en el repositorio o lanza excepción."""
@@ -391,11 +409,43 @@ class GymService:
                 f"Horarios disponibles: {agenda}\n"
                 f"Tiempo máximo permitido por sesión: {self.duracion_maxima_sesion}.")
 
-    def _prioridad_del_cupo(self, horario: str, fecha: str) -> Prioridad | None:
-        """Devuelve la prioridad vigente que aparta un cupo específico."""
+    def _prioridad_del_usuario(self, documento: str, horario: str, fecha: str) -> Prioridad | None:
+        """Devuelve la prioridad vigente del usuario en una franja, si existe."""
         if self.prioridades is None:
             return None
-        return self.prioridades.buscar_por_cupo(horario, fecha)
+        return self.prioridades.buscar(documento, horario, fecha)
+
+    def _ocupantes(self, horario: str, fecha: str) -> list[tuple[str, str, str]]:
+        """Reúne sin repetir a quienes reservaron, visitaron o tienen prioridad en la franja."""
+        ocupantes: dict[str, tuple[str, list[str]]] = {}
+
+        def sumar(documento: str, nombre: str, participacion: str) -> None:
+            _, tipos = ocupantes.setdefault(documento, (nombre, []))
+            if participacion not in tipos:
+                tipos.append(participacion)
+
+        for r in self.listar_reservas():
+            if r.horario == horario and r.fecha == fecha and r.activa:
+                sumar(r.documento, r.nombre_usuario, "Reserva")
+        for v in self.listar_visitas():
+            if v.horario == horario and v.fecha == fecha:
+                usuario = self.usuarios.buscar(v.documento)
+                sumar(v.documento, usuario.nombre if usuario else v.documento, "Visita")
+        for p in self.listar_prioridades():
+            if p.horario == horario and p.fecha == fecha:
+                sumar(p.documento, p.nombre, "Prioridad")
+
+        return [(nombre, doc, ", ".join(tipos)) for doc, (nombre, tipos) in ocupantes.items()]
+
+    def _exigir_cupo(self, documento: str, horario: str, fecha: str) -> None:
+        """Verifica que la franja no esté llena; quien ya cuenta en ella no ocupa un cupo nuevo."""
+        ocupantes = self._ocupantes(horario, fecha)
+        if any(doc == documento for _, doc, _ in ocupantes):
+            return
+        if len(ocupantes) >= self.capacidad_maxima:
+            raise CupoLlenoError(
+                f"El horario {horario} del {fecha} ya alcanzó el máximo de "
+                f"{self.capacidad_maxima} usuarios.")
 
     def _exigir_sin_reserva_activa(self, documento: str, nombre: str, fecha: str) -> None:
         """Verifica que un usuario no tenga más de una reserva activa en la misma fecha."""

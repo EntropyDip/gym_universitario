@@ -65,7 +65,7 @@ class GymService:
         """Devuelve la lista de usuarios registrados."""
         return self.usuarios.listar()
 
-    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str,hora_actual: datetime | None = None) -> str:
+    def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str, hora_actual: datetime | None = None) -> str:
         """Crea una reserva activa aplicando todas las validaciones de negocio (R3)."""
         doc_limpio = str(documento).strip()
         usuario = self._exigir_usuario(doc_limpio)
@@ -103,10 +103,10 @@ class GymService:
             raise ReservaNoEncontradaError("No existe una reserva con esos datos.")
         return reserva.cancelar()
 
-    def confirmar_reserva(self, documento: str, horario: str, fecha: str,hora_actual: datetime | None = None) -> str:
+    def confirmar_reserva(self, documento: str, horario: str, fecha: str, hora_actual: datetime | None = None) -> str:
         """Reactiva una reserva previamente cancelada (R8)."""
         doc_limpio = str(documento).strip()
-        reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=False)or self.reservas.buscar(doc_limpio, horario, fecha))
+        reserva = (self.reservas.buscar(doc_limpio, horario, fecha, activa=False) or self.reservas.buscar(doc_limpio, horario, fecha))
         if reserva is None:
             raise ReservaNoEncontradaError("No se encontró una reserva con esos datos.")
         if reserva.activa:
@@ -128,7 +128,7 @@ class GymService:
         """Devuelve la lista de reservas registradas."""
         return self.reservas.listar()
 
-    def registrar_visita(self, documento: str, horario: str, duracion: int,equipos: list[str]) -> str:
+    def registrar_visita(self, documento: str, horario: str, duracion: int, equipos: list[str]) -> str:
         """Registra la asistencia de un usuario con los equipos usados (R4)."""
         doc_limpio = str(documento).strip()
         usuario = self._exigir_usuario(doc_limpio)

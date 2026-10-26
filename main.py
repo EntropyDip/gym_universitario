@@ -104,12 +104,13 @@ def flujo_consola(gym: GymService) -> None:
     # --- MÓDULO 2: VISITAS Y ESTADÍSTICAS (Juan José Aguirre) ---
 
     print("\n--- 2. Visitas y Estadísticas de Uso (Juan José) ---")
-    _intentar("R4: Registrar visita 1", gym.registrar_visita, "1004", "08:00 AM", 60, ["Mancuernas", "Cinta de correr"])
-    _intentar("R4: Registrar visita 2", gym.registrar_visita, "1004", "08:00 AM", 70, ["Mancuernas", "Poleas"])
-    _intentar("R4: Registrar visita 3", gym.registrar_visita, "1004", "08:00 AM", 80, ["Mancuernas", "Banco plano"])
+    _intentar("R4: Registrar visita 1", gym.registrar_visita, "1004", "08:00 AM", 60, ["Mancuernas", "Cinta de correr"], fecha_hace(3))
+    _intentar("R4: Registrar visita 2", gym.registrar_visita, "1004", "08:00 AM", 70, ["Mancuernas", "Poleas"], fecha_hace(2))
+    _intentar("R4: Registrar visita 3", gym.registrar_visita, "1004", "08:00 AM", 80, ["Mancuernas", "Banco plano"], fecha_hace(1))
     _intentar("R4: Registrar visita Diego", gym.registrar_visita, "1005", "10:00 AM", 45, ["Bicicleta estática"])
     _intentar("R4: Visita duración inválida (debe fallar)", gym.registrar_visita, "1005", "10:00 AM", -10, ["Mancuernas"])
-
+    _intentar("R4: Visita repetida mismo día y horario (debe fallar)", gym.registrar_visita, "1004", "08:00 AM", 30, ["Poleas"], fecha_hace(1))
+   
     _intentar("R5: Horario más frecuente", gym.horario_mas_frecuente)
     _intentar("R6: Programa más frecuente", gym.programa_mas_frecuente)
     _intentar("R11: Promedio de duración por usuario", gym.promedio_duracion_por_usuario)

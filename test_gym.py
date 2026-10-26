@@ -307,9 +307,9 @@ class TestPrioridades(unittest.TestCase):
         self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
 
     # La prioridad garantiza un cupo, no la franja completa
-        #CAMBIAR
+        
         msg = self.gym.realizar_reserva("1005", self.horario, self.fecha, self.hora_solicitud)
-        #CAMBIAR
+        
         self.assertIn("¡Reserva exitosa!", msg)
 
     def test_confirmar_prioridad_a_tiempo(self):
@@ -371,17 +371,16 @@ class TestPrioridades(unittest.TestCase):
     def test_modelo_prioridad_valida_datos_vacios(self):
         with self.assertRaises(DatoVacioError):
             Prioridad("", "Mariana", self.horario, self.fecha, self.hora_solicitud)
-    
-    def crear_usuarios(gym: GymService, cantidad: int) -> list[str]:
+
+def crear_usuarios(gym: GymService, cantidad: int) -> list[str]:
     """Registra usuarios 'Usuario 01'... y devuelve sus documentos."""
     documentos = []
     for i in range(cantidad):
         documento = f"9{i:03d}"
         gym.registrar_usuario(f"Usuario {i + 1:02d}", documento, "Pruebas")
         documentos.append(documento)
-    return documentos
-
-
+    return documentos    
+    
 
 class TestCapacidadPorFranja(unittest.TestCase):
     """Varios usuarios por franja, con máximo de 15 entre reservas, visitas y prioridades."""

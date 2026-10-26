@@ -96,6 +96,13 @@ class SelectorFecha(ttk.Frame):
             self.entrada.insert(0, fecha_inicial)
             self.entrada.pack(side="left")
 
+    def obtener(self) -> str:
+        """Devuelve la fecha seleccionada en formato AAAA-MM-DD."""
+        if self.usa_tkcalendar:
+            return str(self.calendario.get_date().strftime("%Y-%m-%d"))
+        return self.entrada.get().strip()
+
+
 class SelectorHorario(ttk.Frame):
     """Selector de horario basado en un Combobox de solo lectura."""
 

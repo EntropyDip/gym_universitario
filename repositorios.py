@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 
 from modelos import Prioridad, Reserva, Usuario, Visita
 
-
 # ------------------------------------------------------------------ Repositorio de Usuarios (Samuel)
 class UsuarioRepositorio(ABC):
     """Contrato abstracto para el almacenamiento de usuarios."""
@@ -42,7 +41,6 @@ class UsuarioRepositorioMemoria(UsuarioRepositorio):
 
     def eliminar_por_documento(self, documento: str) -> None:
         self._usuarios.pop(documento.strip(), None)
-
 
 # ------------------------------------------------------------------ Repositorio de Reservas (Samuel)
 class ReservaRepositorio(ABC):
@@ -141,16 +139,7 @@ class VisitaRepositorioMemoria(VisitaRepositorio):
         doc = documento.strip()
         self._visitas = [v for v in self._visitas if v.documento != doc]
 
-
-
-
-
-
-
-
 # ------------------------------------------------------------------ Repositorio de Prioridades (Angelina)
-
-
 
 class PrioridadRepositorio(ABC):
     """Contrato abstracto para el almacenamiento de prioridades."""

@@ -74,7 +74,8 @@ class SelectorFecha(ttk.Frame):
 
     def __init__(self, master) -> None:
         super().__init__(master)
-        fecha_inicial = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        inicial = datetime.now() + timedelta(days=dias_inicial)
+        fecha_inicial = inicial.strftime("%Y-%m-%d")
         self.usa_tkcalendar = False
 
         try:
@@ -87,7 +88,7 @@ class SelectorFecha(ttk.Frame):
                 foreground="white",
                 headersbackground="lightblue"
             )
-            self.calendario.set_date(datetime.now() + timedelta(days=1))
+            self.calendario.set_date(inicial)
             self.calendario.pack(side="left")
             self.usa_tkcalendar = True
         except ImportError:

@@ -96,6 +96,27 @@ class SelectorFecha(ttk.Frame):
             self.entrada.insert(0, fecha_inicial)
             self.entrada.pack(side="left")
 
+class SelectorHorario(ttk.Frame):
+    """Selector de horario basado en un Combobox de solo lectura."""
+
+    def __init__(self, master, horarios: list[str]) -> None:
+        super().__init__(master)
+        self.variable = tk.StringVar()
+        self.combo = ttk.Combobox(
+            self,
+            textvariable=self.variable,
+            values=list(horarios),
+            state="readonly",
+            width=15
+        )
+        if horarios:
+            self.combo.current(0)
+        self.combo.pack(side="left")
+
+    def obtener(self) -> str:
+        """Devuelve el horario seleccionado."""
+        return self.variable.get().strip()
+
     def obtener(self) -> str:
         """Devuelve la fecha seleccionada en formato AAAA-MM-DD."""
         if self.usa_tkcalendar:

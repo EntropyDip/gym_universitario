@@ -1,4 +1,4 @@
-"""Pantalla P3: registro y control de visitas (Juan José - HU-06)[cite: 11]."""
+"""Pantalla P3: registro y control de visitas (Juan José - HU-06)."""
 import tkinter as tk
 from tkinter import messagebox, ttk
 
@@ -6,7 +6,7 @@ from interfaz.componentes import PanelBase, SelectorFecha, SelectorHorario, Tabl
 
 
 class PanelVisitas(PanelBase):
-    """Formulario para registrar asistencias y tabla de visitas del gimnasio[cite: 11]."""
+    """Formulario para registrar asistencias y tabla de visitas del gimnasio."""
 
     EQUIPOS_COMUNES = [
         "Mancuernas",
@@ -37,7 +37,7 @@ class PanelVisitas(PanelBase):
         self.entrada_duracion.grid(row=0, column=5, padx=5, pady=4)
 
         ttk.Label(formulario, text="Fecha:").grid(row=0, column=6, padx=5, pady=4, sticky="w")
-        self.selector_fecha = SelectorFecha(formulario, dias_inicial=0)  # por defecto, hoy[cite: 11]
+        self.selector_fecha = SelectorFecha(formulario, dias_inicial=0)  # por defecto, hoy
         self.selector_fecha.grid(row=0, column=7, padx=5, pady=4)
 
         # Fila 1: Equipos utilizados
@@ -70,7 +70,7 @@ class PanelVisitas(PanelBase):
         self.refrescar()
 
     def _obtener_equipos(self) -> list[str]:
-        """Reúne los equipos seleccionados en checkboxes y los ingresados a mano[cite: 11]."""
+        """Reúne los equipos seleccionados en checkboxes y los ingresados a mano."""
         seleccionados = [eq for eq, var in self.check_vars.items() if var.get()]
         otros = self.entrada_otros.get().strip()
         if otros:
@@ -81,7 +81,7 @@ class PanelVisitas(PanelBase):
         return seleccionados
 
     def _limpiar(self) -> None:
-        """Limpia los campos del formulario[cite: 11]."""
+        """Limpia los campos del formulario."""
         self.entrada_doc.delete(0, "end")
         self.entrada_duracion.delete(0, "end")
         self.entrada_otros.delete(0, "end")
@@ -89,7 +89,7 @@ class PanelVisitas(PanelBase):
             var.set(False)
 
     def registrar(self) -> None:
-        """Pide al servicio registrar la visita[cite: 11]."""
+        """Pide al servicio registrar la visita."""
         doc = self.entrada_doc.get().strip()
         horario = self.selector_horario.obtener()
         fecha = self.selector_fecha.obtener()
@@ -109,7 +109,7 @@ class PanelVisitas(PanelBase):
             self.refrescar()
 
     def refrescar(self) -> None:
-        """Recarga la tabla de visitas registradas[cite: 11]."""
+        """Recarga la tabla de visitas registradas."""
         filas = [
             (v.documento, v.fecha, v.horario, f"{v.duracion} min", ", ".join(v.equipos) if v.equipos else "Ninguno")
             for v in self.gym.listar_visitas()

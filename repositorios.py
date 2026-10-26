@@ -153,10 +153,6 @@ class PrioridadRepositorio(ABC):
         """Busca una prioridad por documento, horario y fecha."""
 
     @abstractmethod
-    def buscar_por_cupo(self, horario: str, fecha: str) -> Prioridad | None:
-        """Busca si un horario y fecha están apartados con prioridad."""
-
-    @abstractmethod
     def listar(self) -> list[Prioridad]:
         """Lista todas las prioridades registradas."""
 
@@ -181,12 +177,6 @@ class PrioridadRepositorioMemoria(PrioridadRepositorio):
         doc = documento.strip()
         for p in self._prioridades:
             if p.documento == doc and p.horario == horario and p.fecha == fecha:
-                return p
-        return None
-
-    def buscar_por_cupo(self, horario: str, fecha: str) -> Prioridad | None:
-        for p in self._prioridades:
-            if p.horario == horario and p.fecha == fecha:
                 return p
         return None
 

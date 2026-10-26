@@ -51,3 +51,7 @@ class CupoLlenoError(GymError):
 
 class PrioridadNoCumpleError(GymError):
     """El usuario no cumple los requisitos para tener prioridad."""
+
+
+class VisitaDuplicadaError(GymError):
+    """El usuario ya tiene una visita registrada en esa fecha y horario."""

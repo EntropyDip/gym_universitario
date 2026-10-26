@@ -37,9 +37,9 @@ class PanelEstadisticas(PanelBase):
     def refrescar(self) -> None:
         """Actualiza los indicadores de texto y redibuja los gráficos."""
         # 1. Indicadores textuales
-        self.lbl_horario.config(text=f"Horario pico: {self.gym.horario_mas_frecuente()}")
-        self.lbl_programa.config(text=f"Carrera frecuente: {self.gym.programa_mas_frecuente()}")
-        self.lbl_equipo.config(text=f"Equipo top: {self.gym.equipo_mas_utilizado()}")
+        self.lbl_horario.config(text=self.gym.horario_mas_frecuente())
+        self.lbl_programa.config(text=self.gym.programa_mas_frecuente())
+        self.lbl_equipo.config(text=self.gym.equipo_mas_utilizado())
 
         # 2. Gráficos interactivos con matplotlib
         self._dibujar_graficos()

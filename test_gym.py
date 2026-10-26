@@ -9,7 +9,7 @@ from datetime import datetime
 import unittest
 
 from excepciones import (
-    CupoApartadoError,
+    CupoLlenoError,
     DatoVacioError,
     DuracionInvalidaError,
     FechaInvalidaError,
@@ -266,7 +266,7 @@ class TestConsultasYDisponibilidad(unittest.TestCase):
         self.gym.realizar_reserva("1004", "08:00 AM", self.fecha)
         disp = self.gym.consultar_disponibilidad(self.fecha)
         estados = {horario: estado for horario, estado, _ in disp}
-        self.assertEqual(estados["08:00 AM"], "reservado")
+        self.assertEqual(estados["08:00 AM"], "parcial")
         self.assertEqual(estados["10:00 AM"], "libre")
         self.assertEqual(estados["02:00 PM"], "libre")
 
@@ -301,14 +301,16 @@ class TestPrioridades(unittest.TestCase):
             self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
 
 
-    def test_cupo_con_prioridad_no_puede_ser_reservado_por_otro(self):
+    def test_otro_usuario_puede_reservar_franja_con_prioridad_ajena(self):
         for _ in range(3):
             self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
         self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
 
-        # Diego intenta reservar ese cupo
-        with self.assertRaises(CupoApartadoError):
-            self.gym.realizar_reserva("1005", self.horario, self.fecha, self.hora_solicitud)
+    # La prioridad garantiza un cupo, no la franja completa
+        #CAMBIAR
+        msg = self.gym.realizar_reserva("1005", self.horario, self.fecha, self.hora_solicitud)
+        #CAMBIAR
+        self.assertIn("¡Reserva exitosa!", msg)
 
     def test_confirmar_prioridad_a_tiempo(self):
         for _ in range(3):
@@ -355,17 +357,161 @@ class TestPrioridades(unittest.TestCase):
         with self.assertRaises(ReservaDuplicadaError):
             self.gym.realizar_reserva("1004", self.horario, self.fecha, self.hora_solicitud)
     
-    def test_disponibilidad_muestra_cupo_apartado(self):
+    def test_disponibilidad_cuenta_la_prioridad_como_ocupante(self):
         for _ in range(3):
             self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
         self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
         disp = self.gym.consultar_disponibilidad(self.fecha, self.hora_solicitud)
         estados = {h: e for h, e, _ in disp}
-        self.assertEqual(estados["08:00 AM"], "apartado")
-    
+        self.assertEqual(estados["08:00 AM"], "parcial")
+        ocupantes = self.gym.ocupantes_franja(self.fecha, self.horario, self.hora_solicitud)
+        self.assertEqual([(n, d) for n, d, _ in ocupantes], [("Mariana", "1004")])
+        self.assertIn("Prioridad", ocupantes[0][2])
+
     def test_modelo_prioridad_valida_datos_vacios(self):
         with self.assertRaises(DatoVacioError):
             Prioridad("", "Mariana", self.horario, self.fecha, self.hora_solicitud)
+    
+    def crear_usuarios(gym: GymService, cantidad: int) -> list[str]:
+    """Registra usuarios 'Usuario 01'... y devuelve sus documentos."""
+    documentos = []
+    for i in range(cantidad):
+        documento = f"9{i:03d}"
+        gym.registrar_usuario(f"Usuario {i + 1:02d}", documento, "Pruebas")
+        documentos.append(documento)
+    return documentos
+
+
+
+class TestCapacidadPorFranja(unittest.TestCase):
+    """Varios usuarios por franja, con máximo de 15 entre reservas, visitas y prioridades."""
+
+    def setUp(self):
+        self.gym = crear_gym_prueba()
+        self.fecha = "2026-11-25"
+        self.horario = "10:00 AM"
+        self.ahora = datetime(2026, 11, 1, 8, 0)
+
+    def test_capacidad_por_defecto_es_15(self):
+        self.assertEqual(self.gym.capacidad_maxima, 15)
+
+    def test_varios_usuarios_reservan_la_misma_franja_y_todos_se_muestran(self):
+        docs = crear_usuarios(self.gym, 3)
+        for doc in docs:
+            self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
+        ocupantes = self.gym.ocupantes_franja(self.fecha, self.horario, self.ahora)
+        self.assertEqual({d for _, d, _ in ocupantes}, set(docs))
+        estados = {h: (e, det) for h, e, det in self.gym.consultar_disponibilidad(self.fecha, self.ahora)}
+        self.assertEqual(estados[self.horario][0], "parcial")
+        self.assertIn("3/15", estados[self.horario][1])
+
+    def test_reserva_numero_16_lanza_cupo_lleno(self):
+        docs = crear_usuarios(self.gym, 16)
+        for doc in docs[:15]:
+            self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
+        with self.assertRaises(CupoLlenoError):
+            self.gym.realizar_reserva(docs[15], self.horario, self.fecha, self.ahora)
+        estados = {h: e for h, e, _ in self.gym.consultar_disponibilidad(self.fecha, self.ahora)}
+        self.assertEqual(estados[self.horario], "lleno")
+
+    def test_cancelar_libera_un_cupo(self):
+        docs = crear_usuarios(self.gym, 16)
+        for doc in docs[:15]:
+            self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
+        self.gym.cancelar_reserva(docs[0], self.horario, self.fecha)
+        self.gym.realizar_reserva(docs[15], self.horario, self.fecha, self.ahora)
+        self.assertEqual(len(self.gym.ocupantes_franja(self.fecha, self.horario, self.ahora)), 15)
+
+    def test_reactivar_en_franja_llena_lanza_cupo_lleno(self):
+        docs = crear_usuarios(self.gym, 16)
+        self.gym.realizar_reserva(docs[15], self.horario, self.fecha, self.ahora)
+        self.gym.cancelar_reserva(docs[15], self.horario, self.fecha)
+        for doc in docs[:15]:
+            self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
+        with self.assertRaises(CupoLlenoError):
+            self.gym.confirmar_reserva(docs[15], self.horario, self.fecha, self.ahora)
+
+    def test_las_visitas_cuentan_y_se_muestran_en_la_franja(self):
+        docs = crear_usuarios(self.gym, 16)
+        for doc in docs[:14]:
+            self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
+        self.gym.registrar_visita(docs[14], self.horario, 30, ["Cinta"], self.fecha, self.ahora)
+        participacion = {d: p for _, d, p in self.gym.ocupantes_franja(self.fecha, self.horario, self.ahora)}
+        self.assertEqual(participacion[docs[14]], "Visita")
+        with self.assertRaises(CupoLlenoError):
+            self.gym.realizar_reserva(docs[15], self.horario, self.fecha, self.ahora)
+
+    def test_quien_reserva_y_visita_cuenta_una_sola_vez(self):
+        doc = crear_usuarios(self.gym, 1)[0]
+        self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
+        self.gym.registrar_visita(doc, self.horario, 30, ["Cinta"], self.fecha, self.ahora)
+        ocupantes = self.gym.ocupantes_franja(self.fecha, self.horario, self.ahora)
+        self.assertEqual(len(ocupantes), 1)
+        self.assertEqual(ocupantes[0][2], "Reserva, Visita")
+
+    def test_visitante_numero_16_lanza_cupo_lleno_pero_uno_de_adentro_puede_repetir(self):
+        docs = crear_usuarios(self.gym, 16)
+        for doc in docs[:15]:
+            self.gym.registrar_visita(doc, self.horario, 30, ["Cinta"], self.fecha, self.ahora)
+        with self.assertRaises(CupoLlenoError):
+            self.gym.registrar_visita(docs[15], self.horario, 30, ["Cinta"], self.fecha, self.ahora)
+        self.gym.registrar_visita(docs[0], self.horario, 20, ["Poleas"], self.fecha, self.ahora)
+
+    def test_visita_con_fecha_invalida(self):
+        doc = crear_usuarios(self.gym, 1)[0]
+        with self.assertRaises(FechaInvalidaError):
+            self.gym.registrar_visita(doc, self.horario, 30, ["Cinta"], "2025-02-29", self.ahora)
+
+    def test_visita_sin_fecha_usa_el_dia_de_hoy(self):
+        doc = crear_usuarios(self.gym, 1)[0]
+        self.gym.registrar_visita(doc, self.horario, 30, ["Cinta"], hora_actual=self.ahora)
+        self.assertEqual(self.gym.listar_visitas()[0].fecha, "2026-11-01")
+
+    def test_la_prioridad_ocupa_un_cupo(self):
+        docs = crear_usuarios(self.gym, 16)
+        for doc in docs[:14]:
+            self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
+        for _ in range(3):
+            self.gym.registrar_visita(docs[14], self.horario, 45, ["Cinta"], "2026-11-02", self.ahora)
+        self.gym.prioridad_membresia(docs[14], self.horario, self.fecha, self.ahora)
+        with self.assertRaises(CupoLlenoError):
+            self.gym.realizar_reserva(docs[15], self.horario, self.fecha, self.ahora)
+
+    def test_quien_tiene_reserva_activa_no_necesita_prioridad(self):
+        doc = crear_usuarios(self.gym, 1)[0]
+        for _ in range(3):
+            self.gym.registrar_visita(doc, self.horario, 45, ["Cinta"], "2026-11-02", self.ahora)
+        self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
+        with self.assertRaises(ReservaDuplicadaError):
+            self.gym.prioridad_membresia(doc, self.horario, self.fecha, self.ahora)
+
+
+class TestEspaciosEnFechasYPrioridadesVigentes(unittest.TestCase):
+    """El servicio limpia espacios en fecha y horario; la lista de vigentes purga las vencidas."""
+
+    def setUp(self):
+        self.gym = crear_gym_prueba()
+        self.gym.registrar_usuario("Mariana", "1004", "Administración")
+        self.fecha, self.horario = "2026-11-20", "08:00 AM"
+        self.solicitud = datetime(2026, 11, 19, 8, 0)
+
+    def test_cancelar_con_espacios_en_la_fecha(self):
+        self.gym.realizar_reserva("1004", self.horario, " " + self.fecha + " ", self.solicitud)
+        msg = self.gym.cancelar_reserva("1004", " " + self.horario, " " + self.fecha)
+        self.assertIn("cancelada", msg)
+
+    def test_prioridad_con_espacios_no_lanza_value_error(self):
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Cinta"])
+        msg = self.gym.prioridad_membresia("1004", self.horario, " " + self.fecha, self.solicitud)
+        self.assertIn("obtuvo prioridad", msg)
+
+    def test_listar_prioridades_vigentes_purga_las_vencidas(self):
+        for _ in range(3):
+            self.gym.registrar_visita("1004", self.horario, 45, ["Cinta"])
+        self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.solicitud)
+        self.assertEqual(len(self.gym.listar_prioridades_vigentes(datetime(2026, 11, 20, 5, 0))), 1)
+        self.assertEqual(len(self.gym.listar_prioridades_vigentes(datetime(2026, 11, 20, 7, 0))), 0)
 
 if __name__ == "__main__":
     unittest.main()

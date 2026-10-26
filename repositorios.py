@@ -174,12 +174,15 @@ class PrioridadRepositorio(ABC):
     @abstractmethod
     def eliminar(self, prioridad: Prioridad) -> None:
         """Elimina una prioridad específica."""
-
+        
+    @abstractmethod
+    def eliminar_por_documento(self, documento: str) -> None:
+        """Elimina todas las prioridades pertenecientes al documento."""
 
 class PrioridadRepositorioMemoria(PrioridadRepositorio):
     """Implementación en memoria del repositorio de prioridades."""
 
-    def _init_(self) -> None:
+    def __init__(self) -> None:
         self._prioridades: list[Prioridad] = []
 
     def agregar(self, prioridad: Prioridad) -> None:
@@ -209,7 +212,4 @@ class PrioridadRepositorioMemoria(PrioridadRepositorio):
         doc = documento.strip()
         self._prioridades = [p for p in self._prioridades if p.documento != doc]
 
-    @abstractmethod
-    def eliminar_por_documento(self, documento: str) -> None:
-        """Elimina todas las prioridades pertenecientes al documento."""
 

@@ -119,6 +119,7 @@ class Visita:
     horario: str
     duracion: int
     equipos: list[str]
+    fecha: str
 
     def __post_init__(self) -> None:
         self.documento = str(self.documento).strip()
@@ -127,7 +128,12 @@ class Visita:
             raise DatoVacioError("El documento no puede estar vacío.")
         if not self.horario:
             raise DatoVacioError("El horario no puede quedar vacío.")
-
+        self.fecha = str(self.fecha).strip()
+        if not self.fecha:
+            raise DatoVacioError("La fecha de la visita no puede quedar vacía.")
+        if not es_fecha_valida(self.fecha):
+            raise FechaInvalidaError(
+                "La fecha debe tener el formato AAAA-MM-DD. Ejemplo: 2025-06-15.")
         # Excluir booleanos (que en Python heredan de int) y validar entero positivo
         if isinstance(self.duracion, bool) or not isinstance(self.duracion, int) or self.duracion <= 0:
             raise DuracionInvalidaError("La duración debe ser un número entero positivo de minutos.")

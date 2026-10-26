@@ -72,7 +72,7 @@ class TablaDatos(ttk.Frame):
 class SelectorFecha(ttk.Frame):
     """Selector de fecha que utiliza tkcalendar si está disponible o un campo de texto asistido."""
 
-    def __init__(self, master) -> None:
+    def __init__(self, master, dias_inicial: int = 1) -> None:
         super().__init__(master)
         inicial = datetime.now() + timedelta(days=dias_inicial)
         fecha_inicial = inicial.strftime("%Y-%m-%d")
@@ -101,16 +101,3 @@ class SelectorFecha(ttk.Frame):
         if self.usa_tkcalendar:
             return str(self.calendario.get_date().strftime("%Y-%m-%d"))
         return self.entrada.get().strip()
-
-
-class SelectorHorario(ttk.Combobox):
-    """Selector desplegable para la lista de horarios disponibles del gimnasio."""
-
-    def __init__(self, master, horarios_disponibles: list[str]) -> None:
-        super().__init__(master, values=horarios_disponibles, state="readonly", width=12)
-        if horarios_disponibles:
-            self.current(0)
-
-    def obtener(self) -> str:
-        """Devuelve el horario seleccionado."""
-        return self.get().strip()

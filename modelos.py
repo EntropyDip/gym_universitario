@@ -140,13 +140,6 @@ class Visita:
                 equipos_limpios.append(limpio)
         self.equipos = equipos_limpios
 
-
-
-
-
-
-
-
 # ------------------------------------------------------------------ Entidad Prioridad (Angelina)
 
 @dataclass
@@ -191,11 +184,4 @@ class Prioridad:
     def confirmar(self) -> None:
         """Marca la prioridad como confirmada."""
         self.confirmada = True
-
-
-
-
-
-
-
 

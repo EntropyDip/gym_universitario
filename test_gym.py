@@ -152,7 +152,6 @@ class TestReservas(unittest.TestCase):
         with self.assertRaises(ReservaNoEncontradaError):
             self.gym.cancelar_reserva("1004", "08:00 AM", "2026-12-01")
 
-
 # =========================================================================
 # MÓDULO 2: VISITAS Y ESTADÍSTICAS (Juan José Aguirre - R4, R5, R6, R11, R15)
 # =========================================================================
@@ -222,16 +221,10 @@ class TestEstadisticas(unittest.TestCase):
         # Ranking de equipos: Mancuernas (2 visitas), Cinta (2 visitas)
         ranking = dict(self.gym.ranking_equipos())
         self.assertEqual(ranking["Mancuernas"], 2)
-
-
-
-
-
-
+        
 # =========================================================================
 # MÓDULO 3: PRIORIDADES Y CONSULTAS (Angelina Negrette - R9, R10, R12, R13, R14)
 # =========================================================================
-
 
 class TestConsultasYDisponibilidad(unittest.TestCase):
     """Pruebas de HU-07: Verificación de propietario, resumen y disponibilidad (R9, R10, R14)."""
@@ -327,8 +320,4 @@ class TestPrioridades(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
-
+    

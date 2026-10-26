@@ -98,6 +98,7 @@ class TestUsuarios(unittest.TestCase):
         self.assertEqual(len(self.gym.listar_visitas()), 0)
         self.assertEqual(len(self.gym.listar_prioridades()), 0)
 
+
 class TestReservas(unittest.TestCase):
     """Pruebas de HU-02: Reservas de cupos (R3, R7, R8)."""
 
@@ -152,6 +153,7 @@ class TestReservas(unittest.TestCase):
         with self.assertRaises(ReservaNoEncontradaError):
             self.gym.cancelar_reserva("1004", "08:00 AM", "2026-12-01")
 
+
 # =========================================================================
 # MÓDULO 2: VISITAS Y ESTADÍSTICAS (Juan José Aguirre - R4, R5, R6, R11, R15)
 # =========================================================================
@@ -190,7 +192,7 @@ class TestVisitasYFechas(unittest.TestCase):
     def test_registrar_visita_usuario_no_registrado(self):
         with self.assertRaises(UsuarioNoRegistradoError):
             self.gym.registrar_visita("9999", "08:00 AM", 60, ["Mancuernas"])
-    
+
     def test_registrar_visita_horario_invalido(self):
         with self.assertRaises(HorarioInvalidoError):
             self.gym.registrar_visita("1004", "11:00 AM", 60, ["Mancuernas"])
@@ -230,13 +232,14 @@ class TestEstadisticas(unittest.TestCase):
         ranking = dict(self.gym.ranking_equipos())
         self.assertEqual(ranking["Mancuernas"], 2)
         self.assertEqual(ranking["Cinta"], 2)
-        
+
     def test_promedio_duracion_por_usuario_texto(self):
         self.gym.registrar_visita("1004", "08:00 AM", 40, ["Cinta"])
         self.gym.registrar_visita("1004", "08:00 AM", 60, ["Cinta"])
         informe = self.gym.promedio_duracion_por_usuario()
-        self.assertIn("50.0 minutos", informe)       
-        
+        self.assertIn("50.0 minutos", informe)
+
+
 # =========================================================================
 # MÓDULO 3: PRIORIDADES Y CONSULTAS (Angelina Negrette - R9, R10, R12, R13, R14)
 # =========================================================================
@@ -300,16 +303,13 @@ class TestPrioridades(unittest.TestCase):
         with self.assertRaises(PrioridadNoCumpleError):
             self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
 
-
     def test_otro_usuario_puede_reservar_franja_con_prioridad_ajena(self):
         for _ in range(3):
             self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
         self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
 
-    # La prioridad garantiza un cupo, no la franja completa
-        
+        # La prioridad garantiza un cupo, no la franja completa
         msg = self.gym.realizar_reserva("1005", self.horario, self.fecha, self.hora_solicitud)
-        
         self.assertIn("¡Reserva exitosa!", msg)
 
     def test_confirmar_prioridad_a_tiempo(self):
@@ -337,26 +337,26 @@ class TestPrioridades(unittest.TestCase):
     def test_confirmar_prioridad_inexistente(self):
         with self.assertRaises(PrioridadNoEncontradaError):
             self.gym.confirmar_prioridad("1004", self.horario, self.fecha, self.hora_solicitud)
-    
+
     def test_prioridad_con_menos_de_2_horas_de_antelacion(self):
         hora_tardia = datetime(2026, 11, 20, 7, 0)  # límite era 06:00 AM
         with self.assertRaises(PrioridadNoCumpleError):
             self.gym.prioridad_membresia("1004", self.horario, self.fecha, hora_tardia)
-    
+
     def test_prioridad_por_mayor_tiempo_acumulado(self):
         # Sin 3 visitas en el horario, pero Mariana acumula más minutos que Diego
         self.gym.registrar_visita("1004", "10:00 AM", 90, ["Mancuernas"])
         self.gym.registrar_visita("1005", "10:00 AM", 60, ["Poleas"])
         msg = self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
         self.assertIn("obtuvo prioridad", msg)
-    
+
     def test_dueno_de_la_prioridad_no_puede_reservar_ese_cupo(self):
         for _ in range(3):
             self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
         self.gym.prioridad_membresia("1004", self.horario, self.fecha, self.hora_solicitud)
         with self.assertRaises(ReservaDuplicadaError):
             self.gym.realizar_reserva("1004", self.horario, self.fecha, self.hora_solicitud)
-    
+
     def test_disponibilidad_cuenta_la_prioridad_como_ocupante(self):
         for _ in range(3):
             self.gym.registrar_visita("1004", self.horario, 45, ["Mancuernas"])
@@ -372,6 +372,7 @@ class TestPrioridades(unittest.TestCase):
         with self.assertRaises(DatoVacioError):
             Prioridad("", "Mariana", self.horario, self.fecha, self.hora_solicitud)
 
+
 def crear_usuarios(gym: GymService, cantidad: int) -> list[str]:
     """Registra usuarios 'Usuario 01'... y devuelve sus documentos."""
     documentos = []
@@ -379,8 +380,8 @@ def crear_usuarios(gym: GymService, cantidad: int) -> list[str]:
         documento = f"9{i:03d}"
         gym.registrar_usuario(f"Usuario {i + 1:02d}", documento, "Pruebas")
         documentos.append(documento)
-    return documentos    
-    
+    return documentos
+
 
 class TestCapacidadPorFranja(unittest.TestCase):
     """Varios usuarios por franja, con máximo de 15 entre reservas, visitas y prioridades."""
@@ -482,7 +483,7 @@ class TestCapacidadPorFranja(unittest.TestCase):
             self.gym.registrar_visita(doc, self.horario, 45, ["Cinta"], "2026-11-02", self.ahora)
         self.gym.realizar_reserva(doc, self.horario, self.fecha, self.ahora)
         with self.assertRaises(ReservaDuplicadaError):
-            self.gym.prioridad_membresia(doc, self.horario, self.fecha, self.ahora)
+            self.gym.prioridad_membresia(doc, self.horario, self.fecha, self.hora_solicitud)
 
 
 class TestEspaciosEnFechasYPrioridadesVigentes(unittest.TestCase):
@@ -512,6 +513,6 @@ class TestEspaciosEnFechasYPrioridadesVigentes(unittest.TestCase):
         self.assertEqual(len(self.gym.listar_prioridades_vigentes(datetime(2026, 11, 20, 5, 0))), 1)
         self.assertEqual(len(self.gym.listar_prioridades_vigentes(datetime(2026, 11, 20, 7, 0))), 0)
 
+
 if __name__ == "__main__":
     unittest.main()
-    

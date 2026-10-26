@@ -78,7 +78,7 @@ class PanelPrioridades(PanelBase):
     def refrescar(self) -> None:
         """Actualiza la tabla de prioridades vigentes."""
         filas = []
-        for p in self.gym.listar_prioridades():
+        for p in self.gym.listar_prioridades_vigentes():
             limite_str = p.limite_confirmacion().strftime("%Y-%m-%d %I:%M %p")
             estado = "Confirmada" if p.confirmada else "Pendiente"
             filas.append((p.nombre, p.documento, p.fecha, p.horario, limite_str, estado))

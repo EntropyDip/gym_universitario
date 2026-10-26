@@ -391,7 +391,8 @@ class TestCapacidadPorFranja(unittest.TestCase):
         self.fecha = "2026-11-25"
         self.horario = "10:00 AM"
         self.ahora = datetime(2026, 11, 1, 8, 0)
-
+        self.hora_solicitud = datetime(2026, 11, 1, 8, 0)  
+        
     def test_capacidad_por_defecto_es_15(self):
         self.assertEqual(self.gym.capacidad_maxima, 15)
 

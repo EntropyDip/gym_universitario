@@ -93,7 +93,7 @@ class PanelReservas(PanelBase):
         if filas is not None:
             self.tabla_disponibilidad.cargar(filas, [estado for _, estado, _ in filas])
             self.tabla_ocupantes.cargar([])
- 
+
     def _al_seleccionar_franja(self, _evento=None) -> None:
         """R14: al elegir una franja, lista quiénes reservaron, visitaron o tienen prioridad."""
         seleccion = self.tabla_disponibilidad.arbol.selection()

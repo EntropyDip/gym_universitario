@@ -231,7 +231,7 @@ class TestEstadisticas(unittest.TestCase):
         self.assertEqual(ranking["Mancuernas"], 2)
         self.assertEqual(ranking["Cinta"], 2)
         
-     def test_promedio_duracion_por_usuario_texto(self):
+    def test_promedio_duracion_por_usuario_texto(self):
         self.gym.registrar_visita("1004", "08:00 AM", 40, ["Cinta"])
         self.gym.registrar_visita("1004", "08:00 AM", 60, ["Cinta"])
         informe = self.gym.promedio_duracion_por_usuario()

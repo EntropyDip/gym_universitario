@@ -31,7 +31,10 @@ def fecha_de_manana() -> str:
     """Devuelve la fecha de mañana en formato AAAA-MM-DD."""
     return (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-
+def fecha_hace(dias: int) -> str:
+    """Devuelve la fecha de hace N días en formato AAAA-MM-DD."""
+    return (datetime.now() - timedelta(days=dias)).strftime("%Y-%m-%d")
+    
 def cargar_datos_demo(gym: GymService) -> None:
     """Carga un conjunto representativo de datos de ejemplo en todos los módulos."""
     # 1. Usuarios (R1)

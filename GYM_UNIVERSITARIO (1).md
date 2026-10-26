@@ -14,7 +14,7 @@
 - **Samuel Zapata Trujillo** (Módulo 1: Usuarios, Reservas, Aforo y Ensamblaje)
 
 **Repositorio oficial en GitHub:** <https://github.com/EntropyDip/gym_universitario.git>  
-**Diagrama de clases UML:** <https://drive.google.com/file/d/1BvVh9LW5yrVBxo0tY-hCTbztovgw_svw/view?usp=sharing>  
+**Diagrama de clases UML:** <https://drive.google.com/file/d/1tMd6Ef2lAoQ-iMlc_5vf92QXSMDi7o2w/view?usp=sharing>  
 
 ---
 
@@ -529,7 +529,7 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 
 ### 3.2 Diagrama de Clases
 
-<https://drive.google.com/file/d/1BvVh9LW5yrVBxo0tY-hCTbztovgw_svw/view?usp=sharing>
+<https://drive.google.com/file/d/1tMd6Ef2lAoQ-iMlc_5vf92QXSMDi7o2w/view?usp=sharing>
 
 *(Diagrama de clases UML con `VentanaPrincipal`, los cinco paneles — `PanelUsuarios`, `PanelReservas`, `PanelVisitas`, `PanelPrioridades`, `PanelEstadisticas` —, `GymService`, `GymError` y su jerarquía de 12 excepciones, las interfaces de repositorio y las entidades `Usuario`, `Reserva`, `Visita` y `Prioridad`.)*
 

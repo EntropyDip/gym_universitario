@@ -52,9 +52,12 @@ def cargar_datos_demo(gym: GymService) -> None:
 
     gym.registrar_visita("800", "08:00 AM", 40, ["Cinta de correr"])
 
-    # 3. Reservas (R3)
+    # 3. Reservas (R3): varios usuarios pueden compartir la misma franja (máximo 15)
     gym.realizar_reserva("1005", "10:00 AM", manana)
-
+    
+    gym.realizar_reserva("800", "10:00 AM", manana)
+    
+    gym.realizar_reserva("901", "10:00 AM", manana)
     # 4. Prioridad (R12)
     # Mariana cumple condición de habitual en 08:00 AM
     gym.prioridad_membresia("1004", "08:00 AM", manana, datetime.now())
@@ -122,8 +125,8 @@ def flujo_consola(gym: GymService) -> None:
     _intentar("R12: Solicitar prioridad de membresía", gym.prioridad_membresia, "1004", "08:00 AM", fecha_futura, ahora)
     _intentar("R12: Solicitar prioridad sin cumplir (debe fallar)", gym.prioridad_membresia, "1005", "02:00 PM", fecha_futura, ahora)
 
-    # Intentar reservar cupo apartado con prioridad por otro
-    _intentar("R3: Reservar cupo apartado con prioridad (debe fallar)", gym.realizar_reserva, "1005", "08:00 AM", fecha_futura, ahora)
+    # Otro usuario puede reservar la misma franja: la prioridad solo garantiza un cupo
+    _intentar("R3: Otro usuario reserva la misma franja (permitido, hay cupos)", gym.realizar_reserva, "1005", "08:00 AM", fecha_futura, ahora)
 
     # Confirmar prioridad dentro del tiempo límite
     _intentar("R13: Confirmar prioridad de asistencia", gym.confirmar_prioridad, "1004", "08:00 AM", fecha_futura, ahora)
@@ -132,6 +135,9 @@ def flujo_consola(gym: GymService) -> None:
     print("\nR14: Consulta de disponibilidad para fecha futura:")
     for horario, estado, detalle in gym.consultar_disponibilidad(fecha_futura, ahora):
         print(f"  - [{horario}] {estado.upper()}: {detalle}")
+        for nombre, documento, participacion in gym.ocupantes_franja(fecha_futura, horario, ahora):
+            print(f"        · {nombre} ({documento}) — {participacion}")
+
 
     # Eliminación en cascada (R2)
     print("\n--- 4. Eliminación en Cascada (Samuel) ---")
@@ -139,10 +145,17 @@ def flujo_consola(gym: GymService) -> None:
     print(f"Usuarios restantes: {[u.nombre for u in gym.listar_usuarios()]}")
     print(f"Reservas restantes: {len(gym.listar_reservas())}")
     print(f"Visitas restantes: {len(gym.listar_visitas())}")
+    
+    # Límite de usuarios por franja (R3)
+    print(f"\n--- 5. Límite de {gym.capacidad_maxima} usuarios por franja ---")
+    for i in range(gym.capacidad_maxima):
+        gym.registrar_usuario(f"Aforo {i + 1:02d}", f"3{i:03d}", "Demostración")
+        gym.realizar_reserva(f"3{i:03d}", "12:00 PM", fecha_futura, ahora)
+    _intentar("R3: Reservar en franja llena (debe fallar)", gym.realizar_reserva, "1004", "12:00 PM", fecha_futura, ahora)
+    print(f"Usuarios en {fecha_futura} 12:00 PM: {len(gym.ocupantes_franja(fecha_futura, '12:00 PM', ahora))}/{gym.capacidad_maxima}")
     print("\n" + "=" * 70)
     print("FIN DEL FLUJO DE PRUEBAS DE CONSOLA")
     print("=" * 70 + "\n")
-
 
 def iniciar_interfaz(gym: GymService) -> None:
     """Abre la ventana principal con pestañas de navegación."""
@@ -171,4 +184,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

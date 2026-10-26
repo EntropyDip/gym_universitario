@@ -3,7 +3,7 @@ from tkinter import messagebox, ttk
 
 from interfaz.componentes import PanelBase, SelectorFecha, SelectorHorario, TablaDatos
 
-COLORES_ESTADO = {"libre": "#d9f2d9", "reservado": "#fff2cc", "apartado": "#f8d7da"}
+COLORES_ESTADO = {"libre": "#d9f2d9", "parcial": "#fff2cc", "lleno": "#f8d7da"}
 
 
 class PanelReservas(PanelBase):
@@ -36,11 +36,18 @@ class PanelReservas(PanelBase):
         self.resumen = ttk.Label(self, text="", wraplength=800)
         self.resumen.pack(fill="x", padx=10)
 
-        self.tabla_disponibilidad = TablaDatos(self, ["Horario", "Estado", "Detalle"], alto=3)
+        # Franjas del día (izquierda) y usuarios de la franja seleccionada (derecha)
+        marco_franjas = ttk.Frame(self)
+        marco_franjas.pack(fill="x", padx=10, pady=6)
+        self.tabla_disponibilidad = TablaDatos(marco_franjas, ["Horario", "Estado", "Ocupación"], alto=7)
         self.tabla_disponibilidad.colorear(COLORES_ESTADO)
-        self.tabla_disponibilidad.pack(fill="x", padx=10, pady=6)
+        self.tabla_disponibilidad.pack(side="left", fill="both", expand=True, padx=(0, 5))
+        self.tabla_disponibilidad.arbol.bind("<<TreeviewSelect>>", self._al_seleccionar_franja)
+        self.tabla_ocupantes = TablaDatos(
+            marco_franjas, ["Usuario (franja seleccionada)", "Documento", "Participación"], alto=7)
+        self.tabla_ocupantes.pack(side="left", fill="both", expand=True, padx=(5, 0))
 
-        self.tabla_reservas = TablaDatos(self, ["Usuario", "Documento", "Fecha", "Horario", "Estado"])
+        self.tabla_reservas = TablaDatos(self, ["Usuario", "Documento", "Fecha", "Horario", "Estado"], alto=4)
         self.tabla_reservas.pack(fill="both", expand=True, padx=10, pady=6)
         self.refrescar()
 
@@ -85,6 +92,17 @@ class PanelReservas(PanelBase):
         filas = self.ejecutar(self.gym.consultar_disponibilidad, self.fecha.obtener())
         if filas is not None:
             self.tabla_disponibilidad.cargar(filas, [estado for _, estado, _ in filas])
+            self.tabla_ocupantes.cargar([])
+ 
+    def _al_seleccionar_franja(self, _evento=None) -> None:
+        """R14: al elegir una franja, lista quiénes reservaron, visitaron o tienen prioridad."""
+        seleccion = self.tabla_disponibilidad.arbol.selection()
+        if not seleccion:
+            return
+        horario = str(self.tabla_disponibilidad.arbol.item(seleccion[0], "values")[0])
+        filas = self.ejecutar(self.gym.ocupantes_franja, self.fecha.obtener(), horario)
+        if filas is not None:
+            self.tabla_ocupantes.cargar(filas)
 
     def refrescar(self) -> None:
         """Recarga la tabla de reservas registradas."""

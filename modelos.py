@@ -7,7 +7,7 @@ from excepciones import (
     DuracionInvalidaError,
     FechaInvalidaError,
 )      
-
+DURACION_MAXIMA = 90
 # ------------------------------------------------------------------ Utilidades de fecha (Juan José)
 
 def es_bisiesto(anio: int) -> bool:
@@ -137,6 +137,9 @@ class Visita:
         # Excluir booleanos (que en Python heredan de int) y validar entero positivo
         if isinstance(self.duracion, bool) or not isinstance(self.duracion, int) or self.duracion <= 0:
             raise DuracionInvalidaError("La duración debe ser un número entero positivo de minutos.")
+        if self.duracion > DURACION_MAXIMA:
+            raise DuracionInvalidaError(
+                f"La duración no puede superar {DURACION_MAXIMA} minutos (1:30 horas).")
 
         # Limpiar equipos
         equipos_limpios = []

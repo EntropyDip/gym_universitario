@@ -1,4 +1,5 @@
 """Ventana principal con pestañas para todos los paneles del sistema (Angelina - HU-09)."""
+import os
 import tkinter as tk
 from tkinter import ttk
 
@@ -8,6 +9,9 @@ from interfaz.panel_reservas import PanelReservas
 from interfaz.panel_usuarios import PanelUsuarios
 from interfaz.panel_visitas import PanelVisitas
 
+ROJO_LOGO = "#D2232A"      # fondo de la cabecera (ajústalo al rojo exacto de tu logo)
+ROJO_PALIDO = "#E0454C"     # botones
+ROJO_HOVER = "#EF9A9A"     # botones al pasar el mouse
 
 class VentanaPrincipal(tk.Tk):
     """Ventana principal contenedora que organiza la navegación mediante pestañas."""
@@ -24,23 +28,30 @@ class VentanaPrincipal(tk.Tk):
         self._configurar_estilos()
 
         # Cabecera superior
-        cabecera = ttk.Frame(self, padding=(15, 10))
+        cabecera = tk.Frame(self, bg=ROJO_LOGO, padx=15, pady=8)
         cabecera.pack(fill="x")
-        ttk.Label(
+
+        try:
+            ruta_logo = os.path.join(os.path.dirname(__file__), "logo.png")
+            self.logo = tk.PhotoImage(file=ruta_logo).subsample(2, 2)  # reduce a la mitad
+            tk.Label(cabecera, image=self.logo, bg=ROJO_LOGO).pack(side="left")
+        except tk.TclError:
+            pass  # si no encuentra el logo, la app abre igual
+
+        tk.Label(
             cabecera,
-            text=f"🏋️ {self.gym.nombre.upper()}",
+            text=self.gym.nombre.upper(),
             font=("Segoe UI", 16, "bold"),
-            foreground="#2c3e50"
-        ).pack(side="left")
+            bg=ROJO_LOGO, fg="white"
+        ).pack(side="left", padx=15)
 
         subtitulo = f"Sesión máxima: {self.gym.duracion_maxima_sesion} | Horarios: {' · '.join(self.gym.horarios_disponibles)}"
-        ttk.Label(
+        tk.Label(
             cabecera,
             text=subtitulo,
             font=("Segoe UI", 9),
-            foreground="#7f8c8d"
+            bg=ROJO_LOGO, fg="white"
         ).pack(side="right")
-
         # Separador visual
         ttk.Separator(self, orient="horizontal").pack(fill="x", padx=10, pady=(0, 5))
 
@@ -74,7 +85,11 @@ class VentanaPrincipal(tk.Tk):
             pass
 
         estilo.configure("TNotebook.Tab", font=("Segoe UI", 10, "bold"), padding=[12, 6])
-        estilo.configure("TButton", font=("Segoe UI", 9), padding=5)
+        estilo.configure("TButton", font=("Segoe UI", 9, "bold"), padding=5,
+                         background=ROJO_PALIDO, foreground="white", borderwidth=0)
+        estilo.map("TButton",
+                   background=[("active", ROJO_HOVER), ("pressed", ROJO_PALIDO)],
+                   foreground=[("active", "white")])
         estilo.configure("Treeview.Heading", font=("Segoe UI", 9, "bold"))
         estilo.configure("Treeview", font=("Segoe UI", 9), rowheight=24)
 

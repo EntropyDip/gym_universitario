@@ -1,8 +1,12 @@
 # Sistema de Gestión de Gimnasio Universitario
 
-Sistema desarrollado en Python bajo el paradigma de **Programación Orientada a Objetos** con una **arquitectura por capas desacoplada** para la administración integral de usuarios, reservas, visitas y prioridades de un gimnasio universitario.
+Sistema desarrollado en Python bajo el paradigma de **Programación Orientada a Objetos** con una **arquitectura por capas desacoplada** para la administración integral de usuarios, reservas, visitas y prioridades de un gimnasio universitario, **diseñado específicamente para el uso del encargado de las reservas y el jefe de deportes**.
 
 Permite registrar estudiantes, gestionar reservas con control de aforo por franja horaria (hasta 15 usuarios simultáneos), llevar un registro detallado de visitas y maquinaria deportiva utilizada, fidelizar usuarios habituales con cupos prioritarios temporizados y generar analíticas y estadísticas en tiempo real con gráficos interactivos.
+
+### Roles de Usuario del Sistema
+- **Encargado de las reservas:** perfil operativo que gestiona en el mostrador/recepción el censo de estudiantes, la programación y reactivación de reservas, el registro de asistencias reales (visitas), la verificación de disponibilidad y el trámite de prioridades de membresía.
+- **Jefe de deportes:** perfil supervisor y estratégico que audita la agenda y aforos, y analiza las métricas de rendimiento deportivo (horarios pico, programas con mayor demanda, tiempo de permanencia y ranking de uso de maquinaria) para planificar mantenimiento y optimizar recursos.
 
 ---
 

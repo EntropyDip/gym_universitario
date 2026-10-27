@@ -36,6 +36,11 @@ Para resolver esta problemática de forma integral, se diseñó e implementó un
 4. **Módulo de analítica deportiva con gráficos en tiempo real:** cálculo de horarios pico, programas académicos con mayor demanda, tiempo medio de permanencia por estudiante y ranking de desgaste de maquinaria deportiva, integrando gráficos interactivos con `matplotlib`.
 5. **Robustez mediante manejo formal de excepciones:** separación tajante entre la lógica de negocio y la interfaz gráfica (`tkinter`/`ttk`), asegurando que ningún error del usuario cierre la aplicación y que las validaciones no dependan de la vista mediante una jerarquía de 12 excepciones derivadas de `GymError`.
 
+#### Destinatarios y roles de uso del software
+La aplicación de escritorio está concebida exclusivamente para el uso del personal administrativo del gimnasio de la Universidad de Medellín, concretamente:
+- **Encargado de las reservas:** usuario operativo que interactúa directamente en el mostrador/recepción para registrar y dar de baja a estudiantes, programar reservas de cupos, registrar asistencias efectivas (visitas) y máquinas empleadas, comprobar disponibilidad en tiempo real y gestionar las solicitudes de prioridad de membresía.
+- **Jefe de deportes:** usuario táctico y supervisor que analiza el comportamiento global del gimnasio mediante el panel de estadísticas y analítica deportiva (horarios pico, carreras con mayor afluencia, tiempo promedio de entrenamiento y ranking de maquinaria más utilizada) para la planificación de horarios, mantenimiento preventivo y adquisición de nuevos equipos deportivos.
+
 ---
 
 ## 2. Análisis del Problema
@@ -55,7 +60,7 @@ El resultado de cada operación se clasifica formalmente en tres tipos:
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R1 |
-| **Actor** | Administrador / Sistema |
+| **Actor** | Encargado de las reservas / Jefe de deportes |
 | **Resumen** | Registra un nuevo estudiante en el sistema, almacenando su nombre, número de documento y programa académico. Valida que el documento sea único y que ningún dato esté vacío. |
 | **Entradas** | `nombre` (texto no vacío), `documento` (texto no vacío), `programa` (texto no vacío). |
 | **Resultado** | **Tipo 1 (Modificación).** Se crea y persiste una nueva entidad `Usuario`. Si el documento ya existe, lanza `UsuarioYaRegistradoError`. Si algún campo llega en blanco, lanza `DatoVacioError`. |
@@ -80,7 +85,7 @@ Salida: Usuario Mariana Restrepo registrado exitosamente.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R2 |
-| **Actor** | Administrador |
+| **Actor** | Encargado de las reservas / Jefe de deportes |
 | **Resumen** | Da de baja el registro de un usuario verificando la coincidencia exacta de nombre y documento, eliminando de forma inmediata y consistente todas sus reservas, visitas históricas y prioridades asociadas en el sistema. |
 | **Entradas** | `nombre` (texto), `documento` (texto). |
 | **Resultado** | **Tipo 1 (Modificación).** Elimina el usuario del repositorio y ejecuta una purga en cascada sobre los repositorios de reservas, visitas y prioridades. Si no hay coincidencia, lanza `UsuarioNoRegistradoError`. |
@@ -104,7 +109,7 @@ Salida: El usuario identificado con 1004 se eliminó correctamente.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R3 |
-| **Actor** | Estudiante / Sistema |
+| **Actor** | Encargado de las reservas (a solicitud del estudiante) |
 | **Resumen** | Aparta un cupo para un horario y fecha específicos, validando que el estudiante esté registrado, que el horario pertenezca a la franja operativa (08:00 AM a 08:00 PM), que la fecha sea válida en el calendario, que el aforo de 15 personas de la franja no esté lleno, que el usuario no tenga ya un cupo apartado con prioridad en esa franja, que el estudiante no tenga otra reserva activa ese día y que no supere el límite de 3 reservas activas en la misma semana calendario (`max_reservas_semana = 3`). |
 | **Entradas** | `documento` (texto), `horario_deseado` (texto en agenda), `fecha` (texto AAAA-MM-DD), `hora_actual` (datetime opcional). |
 | **Resultado** | **Tipo 1 (Modificación).** Registra una entidad `Reserva` en estado activa. Si viola alguna regla, lanza la excepción correspondiente (`UsuarioNoRegistradoError`, `FechaInvalidaError`, `HorarioInvalidoError`, `CupoLlenoError`, `ReservaDuplicadaError` por doble reserva el mismo día, cupo apartado con prioridad o superar las 3 reservas activas semanales). |
@@ -127,7 +132,7 @@ Salida: ¡Reserva exitosa! Mariana Restrepo tiene su espacio a las 08:00 AM. El 
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R4 |
-| **Actor** | Encargado del Gimnasio |
+| **Actor** | Encargado de las reservas (control de acceso) |
 | **Resumen** | Registra el acceso real de un estudiante a las instalaciones, guardando el horario de ingreso, la duración en minutos de la sesión (entero positivo de máximo 90 minutos / 1:30 horas, `DURACION_MAXIMA = 90`), la fecha de visita (opcional, por defecto toma la fecha actual del sistema) y las máquinas o equipos utilizados. Previene que el mismo usuario registre dos visitas en la misma fecha y franja horaria. Contabiliza el acceso en el aforo de 15 usuarios de la franja. |
 | **Entradas** | `documento` (texto), `horario` (texto disponible), `duracion` (entero positivo > 0 y <= 90), `equipos` (lista de cadenas de texto), `fecha` (texto AAAA-MM-DD opcional), `hora_actual` (datetime opcional). |
 | **Resultado** | **Tipo 1 (Modificación).** Almacena una entidad `Visita`. Valida usuario registrado (`UsuarioNoRegistradoError`), horario disponible (`HorarioInvalidoError`), duración entera positiva de máximo 90 minutos excluyendo booleanos (`DuracionInvalidaError`), fecha gregoriana válida (`FechaInvalidaError`), visita no duplicada (`VisitaDuplicadaError`) y cupo disponible en la franja (`CupoLlenoError`). |
@@ -150,7 +155,7 @@ Salida: Visita de Mariana Restrepo registrada correctamente.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R5 |
-| **Actor** | Encargado / Sistema |
+| **Actor** | Jefe de deportes / Encargado de las reservas |
 | **Resumen** | Analiza el historial acumulado de visitas y determina la franja horaria que registra la mayor cantidad de asistencias efectivas. |
 | **Entradas** | Ninguna (consulta sobre las visitas registradas). |
 | **Resultado** | **Tipo 2 (Cálculo).** Cadena con el horario pico. Si no hay visitas registradas, retorna *«No hay visitas registradas.»*. |
@@ -170,7 +175,7 @@ Salida: El horario más frecuente es 08:00 AM.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R6 |
-| **Actor** | Encargado / Directivos |
+| **Actor** | Jefe de deportes |
 | **Resumen** | Identifica la carrera universitaria con el mayor número de estudiantes inscritos en el gimnasio. |
 | **Entradas** | Ninguna (consulta sobre la colección de usuarios). |
 | **Resultado** | **Tipo 2 (Cálculo).** Cadena con el nombre del programa académico con mayor representatividad. Si no hay usuarios, informa que no hay registros. |
@@ -190,7 +195,7 @@ Salida: La carrera más frecuente es Administración de Empresas.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R7 |
-| **Actor** | Estudiante / Sistema |
+| **Actor** | Encargado de las reservas (a solicitud del estudiante) |
 | **Resumen** | Cambia el estado de una reserva activa a cancelada, liberando de forma inmediata un cupo dentro del aforo de 15 usuarios de la franja. Si ya estaba cancelada, notifica al usuario sin provocar errores. |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto). |
 | **Resultado** | **Tipo 1 (Modificación).** La reserva pasa a `activa = False`. Si no existe ninguna reserva con esos parámetros, lanza `ReservaNoEncontradaError`. |
@@ -213,7 +218,7 @@ Salida: Reserva de Mariana Restrepo a las 08:00 AM cancelada.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R8 |
-| **Actor** | Estudiante / Sistema |
+| **Actor** | Encargado de las reservas (a solicitud del estudiante) |
 | **Resumen** | Reactiva una reserva previamente cancelada, validando que la franja horaria no haya alcanzado el aforo máximo de 15 usuarios, que el usuario no tenga ya prioridad en la franja, que no genere conflicto de dos reservas activas el mismo día y que no supere el límite de 3 reservas activas en la misma semana calendario (`max_reservas_semana = 3`). |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto), `hora_actual` (opcional). |
 | **Resultado** | **Tipo 1 (Modificación).** La reserva pasa a `activa = True`. Lanza `CupoLlenoError` si la franja completó los 15 usuarios o `ReservaDuplicadaError` si ya cuenta con otra reserva activa ese día, prioridad en la franja o alcanzó el límite de 3 reservas activas semanales. |
@@ -236,7 +241,7 @@ Salida: Reserva de Mariana Restrepo confirmada nuevamente para las 08:00 AM.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R9 |
-| **Actor** | Sistema / Usuario |
+| **Actor** | Encargado de las reservas / Jefe de deportes |
 | **Resumen** | Consulta rápidamente si un número de documento posee alguna reserva registrada (activa o histórica) en el gimnasio. |
 | **Entradas** | `documento` (texto). |
 | **Resultado** | **Tipo 2 (Cálculo).** Devuelve la cadena *«Sí»* si existe al menos una reserva coincidente, o *«No»* en caso contrario. |
@@ -259,7 +264,7 @@ Salida: ¿La reserva pertenece al usuario?: Sí.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R10 |
-| **Actor** | Estudiante / Encargado |
+| **Actor** | Encargado de las reservas / Jefe de deportes |
 | **Resumen** | Genera una descripción legible y resumida de la reserva más relevante del estudiante (nombre, documento, fecha, horario y estado activa/cancelada). |
 | **Entradas** | `documento` (texto). |
 | **Resultado** | **Tipo 2 (Cálculo).** Cadena formateada descriptiva. Si el usuario no posee reservas, lanza `ReservaNoEncontradaError`. |
@@ -282,7 +287,7 @@ Salida: Reserva (activa) — Mariana Restrepo (1004), 2026-11-10, 08:00 AM.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R11 |
-| **Actor** | Encargado / Analista |
+| **Actor** | Jefe de deportes / Encargado de las reservas |
 | **Resumen** | Calcula la media aritmética de tiempo en minutos por usuario a partir de sus visitas registradas, con precisión de un decimal, y genera las estructuras numéricas para el gráfico de barras. |
 | **Entradas** | Ninguna (consulta sobre la colección de visitas). |
 | **Resultado** | **Tipo 2 (Cálculo).** Texto consolidado con el promedio de cada usuario y lista de tuplas `(nombre_usuario, promedio_minutos)` ordenada descendentemente. |
@@ -306,7 +311,7 @@ Promedio de duración por usuario:
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R12 |
-| **Actor** | Estudiante habitual |
+| **Actor** | Encargado de las reservas (a solicitud del estudiante habitual) |
 | **Resumen** | Permite apartar un cupo con exclusividad temporal en un horario y fecha determinados si el usuario es «habitual» (acumula ≥3 visitas registradas a esa misma hora) o si registra estrictamente mayor tiempo total de entrenamiento que cualquier otro usuario (sin empates). La prioridad reserva 1 de los 15 cupos disponibles de la franja. Otros estudiantes pueden seguir reservando los cupos restantes mientras haya disponibilidad. |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto AAAA-MM-DD), `hora_actual` (datetime inyectable). |
 | **Resultado** | **Tipo 1 (Modificación).** Crea un cupo garantizado en la entidad `Prioridad`. Si faltan menos de 2 horas para la sesión o no cumple los criterios de fidelidad, lanza `PrioridadNoCumpleError`. Si ya tiene reserva activa en la franja, lanza `ReservaDuplicadaError`. Si la franja ya alcanzó los 15 usuarios, lanza `CupoLlenoError`. |
@@ -329,7 +334,7 @@ Salida: Mariana Restrepo obtuvo prioridad para el horario 08:00 AM del 2026-11-2
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R13 |
-| **Actor** | Estudiante con prioridad / Sistema |
+| **Actor** | Encargado de las reservas (a solicitud del estudiante) |
 | **Resumen** | Ratifica la asistencia al cupo apartado. Si la confirmación ocurre con 2 o más horas de antelación respecto al horario, el cupo queda garantizado; si se intenta confirmar con menos de 2 horas (o vencido el límite), la prioridad caduca, se purga del sistema y el cupo se libera automáticamente. |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto), `hora_actual` (datetime inyectable). |
 | **Resultado** | **Tipo 3 (Mezcla).** Si `hora_actual <= limite`: confirma el cupo (`confirmada = True`). Si `hora_actual > limite`: elimina la prioridad y libera el cupo. Si la prioridad no existe, lanza `PrioridadNoEncontradaError`. |
@@ -352,7 +357,7 @@ Salida: Mariana Restrepo confirmó su asistencia. El cupo de las 08:00 AM del 20
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R14 |
-| **Actor** | Estudiante / Recepción |
+| **Actor** | Encargado de las reservas / Jefe de deportes |
 | **Resumen** | Consulta en tiempo real el aforo de todas las franjas horarias de la jornada (08:00 AM a 08:00 PM) para una fecha específica, reportando si cada franja está `LIBRE` (0/15 usuarios), `PARCIAL` (1 a 14 usuarios, indicando cupos libres) o `LLENO` (15/15 usuarios). Asimismo, permite consultar en detalle los ocupantes de cada franja (`ocupantes_franja`), desglosando nombre, documento y tipo de participación (Reserva, Visita, Prioridad) sin duplicar al estudiante multirrol. |
 | **Entradas** | `fecha` (texto AAAA-MM-DD), `hora_actual` (opcional). |
 | **Resultado** | **Tipo 2 (Cálculo).** Lista de tuplas `(horario, estado, detalle)`. Método complementario `ocupantes_franja(fecha, horario)` que retorna `list[tuple[nombre, documento, participaciones]]`. |
@@ -382,7 +387,7 @@ Ejemplo de uso / salida en consola:
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R15 |
-| **Actor** | Administrador / Mantenimiento |
+| **Actor** | Jefe de deportes / Encargado de las reservas |
 | **Resumen** | Cuantifica la frecuencia de uso de cada máquina o equipo deportivo a partir de los registros de visitas (contando máximo una vez por visita y normalizando mayúsculas/minúsculas) y genera el ranking analítico de utilización. |
 | **Entradas** | Ninguna (consulta sobre las visitas registradas). |
 | **Resultado** | **Tipo 2 (Cálculo).** Identifica el equipo con mayor demanda acumulada y devuelve la lista de tuplas `(equipo, número_de_usos)` ordenada descendentemente (`ranking_equipos()`). |
@@ -449,6 +454,11 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 - **`Visita`:** registra la presencia real, tiempo de uso y máquinas empleadas.
 - **`Prioridad`:** representa un cupo preferencial otorgado a estudiantes habituales con una ventana de caducidad obligatoria.
 - **`GymService`:** entidad central que administra el catálogo de horarios, controla el aforo máximo de 15 usuarios por franja y orquesta las reglas de negocio entre los colaboradores.
+
+#### Actores del sistema
+
+- **Encargado de las reservas:** Usuario operativo primario del software en la recepción del gimnasio. Gestiona el registro y baja de usuarios, atiende y formaliza las solicitudes de reserva, registra los accesos físicos (visitas) con sus tiempos de permanencia y máquinas usadas, tramita prioridades de membresía y consulta la disponibilidad en tiempo real.
+- **Jefe de deportes:** Usuario táctico y supervisor general. Audita el aforo y la agenda de franjas horarias, analiza los reportes consolidados y monitorea los paneles analíticos interactivos (horarios pico, carreras más representativas, permanencia promedio y ranking de desgaste de maquinaria deportiva) para la toma de decisiones estratégicas de mantenimiento, presupuesto y logística.
 
 #### Tabla de atributos, tipos y valores permitidos
 

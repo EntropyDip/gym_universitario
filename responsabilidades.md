@@ -28,6 +28,7 @@ La entrega pide diseño e implementación completa, manejo riguroso de excepcion
 - **Estilo y calidad de código.** Convención PEP 8 (`snake_case` para funciones/variables, `PascalCase` para clases), tipado estático asistido (`typing`), docstrings explicativos en cada módulo, clase y método público.
 - **Librerías externas y degradación elegante.** `matplotlib` y `tkcalendar`, registradas en `requirements.txt`, con manejo de excepciones por importación para garantizar que la aplicación continúe operando si alguna no está presente.
 - **Cobertura de pruebas unitarias.** Suite automatizada con `unittest` que cubre 55 pruebas en total, abarcando casos de éxito, bordes, límites de aforo y situaciones anómalas.
+- **Público objetivo y roles de usuario:** El sistema es una aplicación administrativa de escritorio concebida para dos perfiles clave de la Universidad de Medellín: el **Encargado de las reservas** (operación diaria: censo de usuarios, asignación/cancelación de reservas, registro de visitas en recepción y validación de prioridades) y el **Jefe de deportes** (supervisión y toma de decisiones: análisis de aforos, métricas de horarios pico, carreras más activas y desgaste de maquinaria).
 
 ---
 
@@ -81,7 +82,7 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 **Módulo:** Usuarios, Reservas, Aforo y Ensamblaje
 
 #### HU-01: Registro y eliminación de usuarios (5 puntos)
-- **Como:** Administrador del gimnasio.
+- **Como:** Encargado de las reservas / Jefe de deportes.
 - **Quiero:** Registrar estudiantes con sus datos académicos y darlos de baja junto con sus registros asociados.
 - **Para:** Mantener un censo oficial, limpio y sin duplicados en las instalaciones deportivas.
 - **Requisitos:** R1, R2.
@@ -93,9 +94,9 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   5. Saneamiento automático de espacios en blanco (`strip()`).
 
 #### HU-02: Reservas de cupos y control de aforo (8 puntos)
-- **Como:** Usuario del gimnasio.
+- **Como:** Encargado de las reservas (a solicitud del estudiante).
 - **Quiero:** Reservar, cancelar y reactivar turnos en la agenda del gimnasio.
-- **Para:** Asegurar mi espacio de entrenamiento sin depender de correos electrónicos.
+- **Para:** Garantizar el aforo ordenado de 15 cupos y asegurar el turno de entrenamiento sin depender de correos electrónicos.
 - **Requisitos:** R3, R7, R8.
 - **Criterios de aceptación:**
   1. Cada franja horaria admite hasta 15 usuarios concurrentes. Si se intenta reservar en una franja con 15 ocupantes, lanza `CupoLlenoError`.
@@ -106,7 +107,7 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   6. Confirmar (reactivar) una reserva previamente cancelada verifica que la franja no esté llena (`CupoLlenoError`), que el usuario no tenga otra reserva activa ese día ni supere las 3 reservas semanales (`ReservaDuplicadaError`).
 
 #### HU-03: Interfaz de usuarios y reservas, y ensamblaje general (5 puntos)
-- **Como:** Usuario y administrador del sistema.
+- **Como:** Encargado de las reservas y Jefe de deportes.
 - **Quiero:** Paneles gráficos para gestionar usuarios y reservas, y un punto de entrada flexible.
 - **Para:** Operar el gimnasio intuitivamente y validar su funcionamiento en diferentes entornos.
 - **Requisitos:** R1, R2, R3, R7, R8 (pantallas P1 y P2), ensamblaje en `main.py`.
@@ -122,9 +123,9 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 **Módulo:** Visitas, Calendario y Estadísticas
 
 #### HU-04: Registro de visitas y calendario gregoriano (5 puntos)
-- **Como:** Encargado del gimnasio.
+- **Como:** Encargado de las reservas (control de acceso y recepción del gimnasio).
 - **Quiero:** Registrar la asistencia real de cada estudiante indicando horario, duración y maquinaria utilizada.
-- **Para:** Cuantificar el flujo real de deportistas y alimentar los modelos estadísticos.
+- **Para:** Cuantificar el flujo real de deportistas y alimentar los modelos estadísticos institucionales.
 - **Requisitos:** R4.
 - **Criterios de aceptación:**
   1. Validación matemática de años bisiestos y días por mes (`es_bisiesto` y `es_fecha_valida`).
@@ -135,9 +136,9 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   6. Limpieza y saneamiento de la lista de equipos utilizados.
 
 #### HU-05: Estadísticas de uso y analítica deportiva (8 puntos)
-- **Como:** Encargado y analista del gimnasio.
+- **Como:** Jefe de deportes (con apoyo del encargado de reservas).
 - **Quiero:** Conocer horarios pico, programas más frecuentes, tiempo promedio por usuario y ranking de maquinaria.
-- **Para:** Tomar decisiones sobre mantenimiento de máquinas y optimización de espacios.
+- **Para:** Tomar decisiones sobre mantenimiento preventivo de máquinas, dotación presupuestal y optimización de espacios.
 - **Requisitos:** R5, R6, R11, R15.
 - **Criterios de aceptación:**
   1. `horario_mas_frecuente` y `programa_mas_frecuente` devuelven la moda estadística, o mensaje claro si no hay datos.
@@ -146,9 +147,9 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   4. `equipo_mas_utilizado` y `ranking_equipos` consolidan el uso de maquinaria normalizando nombres (insensible a mayúsculas/minúsculas).
 
 #### HU-06: Interfaz de visitas y visualización analítica (5 puntos)
-- **Como:** Encargado del gimnasio.
+- **Como:** Encargado de las reservas y Jefe de deportes.
 - **Quiero:** Una pantalla de captura rápida de visitas y un panel analítico con gráficos interactivos.
-- **Para:** Monitorear el gimnasio en tiempo real.
+- **Para:** Monitorear el aforo del gimnasio en tiempo real y auditar métricas deportivas.
 - **Requisitos:** R4, R5, R6, R11, R15 (pantallas P3 y P5).
 - **Criterios de aceptación:**
   1. `PanelVisitas` ofrece casillas para equipos usuales y campo para máquinas adicionales.
@@ -161,9 +162,9 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 **Módulo:** Prioridades, Consultas y Diseño de Interfaz
 
 #### HU-07: Consultas de titularidad, resumen y disponibilidad (5 puntos)
-- **Como:** Usuario del gimnasio.
-- **Quiero:** Saber si tengo reservas, consultar su resumen y revisar qué horarios tienen cupos libres.
-- **Para:** Evitar traslados innecesarios y planificar mis entrenamientos con certeza.
+- **Como:** Encargado de las reservas (a solicitud del estudiante) y Jefe de deportes.
+- **Quiero:** Saber si un estudiante tiene reservas, consultar su resumen y revisar qué horarios tienen cupos libres u ocupantes.
+- **Para:** Atender oportunamente las consultas de los usuarios y verificar el estado del aforo en tiempo real.
 - **Requisitos:** R9, R10, R14.
 - **Criterios de aceptación:**
   1. `verificar_propietario_reserva` retorna «Sí» o «No» según la existencia de registros del documento.
@@ -173,9 +174,9 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   5. En `PanelReservas`, al hacer clic en una franja de la tabla de disponibilidad, se actualiza automáticamente la tabla de ocupantes contigua.
 
 #### HU-08: Sistema dinámico de prioridades de membresía (8 puntos)
-- **Como:** Usuario habitual o constante del gimnasio.
-- **Quiero:** Apartar un cupo con exclusividad temporal para asegurar mi turno preferido.
-- **Para:** Premiar mi fidelidad y disciplina deportiva.
+- **Como:** Encargado de las reservas (a solicitud del estudiante habitual).
+- **Quiero:** Apartar un cupo con exclusividad temporal para asegurar el turno de usuarios fieles o constantes.
+- **Para:** Reconocer la disciplina deportiva y garantizar cupos conforme a las reglas de membresía.
 - **Requisitos:** R12, R13.
 - **Criterios de aceptación:**
   1. Se otorga prioridad si el usuario es "habitual" (≥3 visitas en ese mismo horario) o si acumula estrictamente más minutos que todos los demás usuarios (sin empates).
@@ -186,9 +187,9 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   6. `listar_prioridades_vigentes` depura automáticamente las prioridades caducadas antes de listarlas.
 
 #### HU-09: Ventana principal, navegación y componentes base (5 puntos)
-- **Como:** Usuario del sistema.
+- **Como:** Encargado de las reservas y Jefe de deportes.
 - **Quiero:** Una interfaz gráfica organizada en pestañas, selectores amigables, identidad corporativa y un diseño documentado en UML.
-- **Para:** Navegar por todos los módulos del gimnasio con facilidad y claridad visual.
+- **Para:** Operar todos los módulos del gimnasio con facilidad, agilidad y consistencia visual institucional.
 - **Requisitos:** P1 a P5, `VentanaPrincipal`, `componentes.py`, diagrama de clases UML.
 - **Criterios de aceptación:**
   1. `VentanaPrincipal` integra el cuaderno de pestañas (`ttk.Notebook`), cabecera roja institucional de la Universidad de Medellín (`#D2232A`), logotipo corporativo (`interfaz/logo.png`), botones destacados en rojo (`#E0454C`) y refresco reactivo automático de paneles.

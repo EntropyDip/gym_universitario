@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 
 from excepciones import (
+    CorreoInvalidoError,
     CupoLlenoError,
     FechaInvalidaError,
     HorarioInvalidoError,
@@ -38,9 +39,14 @@ class GymService:
         self.visitas = visitas
         self.prioridades = prioridades
 
-    def registrar_usuario(self, nombre: str, documento: str, programa: str) -> str:
-        """Registra un nuevo usuario validando que el documento sea único (R1)."""
-        usuario = Usuario(nombre, documento, programa)
+    def registrar_usuario(self, nombre: str, documento: str, programa: str,
+                          correo: str = "") -> str:
+        """Registra un nuevo usuario validando que el documento sea único (R1).
+
+        El campo correo es opcional; si se provee se valida su formato y se
+        almacena para el envío de notificaciones de confirmación de reserva.
+        """
+        usuario = Usuario(nombre, documento, programa, correo)
         if self.usuarios.buscar(usuario.documento) is not None:
             raise UsuarioYaRegistradoError(
                 f"El documento {usuario.documento} ya se encuentra registrado.")
@@ -96,9 +102,19 @@ class GymService:
 
         nueva_reserva = Reserva(doc_limpio, usuario.nombre, horario_deseado, fecha)
         self.reservas.agregar(nueva_reserva)
-        return (f"¡Reserva exitosa! {usuario.nombre} tiene su espacio a las "
-                f"{horario_deseado}. El tiempo para estar haciendo uso del gym es: "
-                f"{self.duracion_maxima_sesion}.")
+        mensaje = (f"¡Reserva exitosa! {usuario.nombre} tiene su espacio a las "
+                   f"{horario_deseado}. El tiempo para estar haciendo uso del gym es: "
+                   f"{self.duracion_maxima_sesion}.")
+        # Notificación por correo (no bloquea la UI; se ignora si falta correo o credenciales)
+        if usuario.correo:
+            from notificador import enviar_confirmacion_reserva
+            enviar_confirmacion_reserva(
+                destinatario=usuario.correo,
+                nombre_usuario=usuario.nombre,
+                horario=horario_deseado,
+                fecha=fecha,
+            )
+        return mensaje
 
     def cancelar_reserva(self, documento: str, horario: str, fecha: str) -> str:
         """Cancela una reserva activa; si ya está cancelada lo notifica sin error (R7)."""
@@ -130,7 +146,19 @@ class GymService:
         self._exigir_sin_reserva_activa(doc_limpio, reserva.nombre_usuario, fecha)
         self._exigir_limite_semanal(doc_limpio, reserva.nombre_usuario, fecha)
         self._exigir_cupo(doc_limpio, horario, fecha)
-        return reserva.confirmar()
+        resultado = reserva.confirmar()
+        # Notificación por correo al reactivar la reserva
+        usuario = self.usuarios.buscar(doc_limpio)
+        if usuario and usuario.correo:
+            from notificador import enviar_confirmacion_reserva
+            enviar_confirmacion_reserva(
+                destinatario=usuario.correo,
+                nombre_usuario=reserva.nombre_usuario,
+                horario=horario,
+                fecha=fecha,
+            )
+        return resultado
+
 
     def listar_reservas(self) -> list[Reserva]:
         """Devuelve la lista de reservas registradas."""

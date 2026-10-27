@@ -20,19 +20,27 @@ class PanelUsuarios(PanelBase):
             self.campos[clave] = ttk.Entry(formulario, width=35)
             self.campos[clave].grid(row=fila, column=1, padx=5, pady=4)
 
+        # Campo correo electrónico (opcional) — para notificaciones de reserva
+        ttk.Label(formulario, text="Correo electrónico").grid(
+            row=3, column=0, padx=5, pady=4, sticky="w")
+        self.campos["correo"] = ttk.Entry(formulario, width=35)
+        self.campos["correo"].grid(row=3, column=1, padx=5, pady=4)
+        ttk.Label(formulario, text="(opcional — recibirá confirmación de reserva)",
+                  foreground="#666").grid(row=3, column=2, padx=5, sticky="w")
+
         botones = ttk.Frame(formulario)
-        botones.grid(row=3, column=0, columnspan=2, pady=6)
+        botones.grid(row=4, column=0, columnspan=3, pady=6)
         ttk.Button(botones, text="Registrar", command=self.registrar).pack(side="left", padx=5)
         ttk.Button(botones, text="Eliminar", command=self.eliminar).pack(side="left", padx=5)
 
-        self.tabla = TablaDatos(self, ["Nombre", "Documento", "Programa"])
+        self.tabla = TablaDatos(self, ["Nombre", "Documento", "Programa", "Correo"])
         self.tabla.pack(fill="both", expand=True, padx=10, pady=8)
         self.refrescar()
 
-    def _leer(self) -> tuple[str, str, str]:
-        """Lee los tres campos del formulario."""
+    def _leer(self) -> tuple[str, str, str, str]:
+        """Lee los campos del formulario incluyendo el correo."""
         return (self.campos["nombre"].get(), self.campos["documento"].get(),
-                self.campos["programa"].get())
+                self.campos["programa"].get(), self.campos["correo"].get())
 
     def _limpiar(self) -> None:
         """Vacía los campos del formulario."""
@@ -41,7 +49,8 @@ class PanelUsuarios(PanelBase):
 
     def registrar(self) -> None:
         """Pide al servicio registrar el usuario y muestra el mensaje o el error."""
-        mensaje = self.ejecutar(self.gym.registrar_usuario, *self._leer())
+        nombre, documento, programa, correo = self._leer()
+        mensaje = self.ejecutar(self.gym.registrar_usuario, nombre, documento, programa, correo)
         if mensaje:
             messagebox.showinfo("Usuarios", mensaje)
             self._limpiar()
@@ -49,7 +58,7 @@ class PanelUsuarios(PanelBase):
 
     def eliminar(self) -> None:
         """Pide confirmación y pide al servicio eliminar al usuario (nombre y documento)."""
-        nombre, documento, _ = self._leer()
+        nombre, documento, _, _ = self._leer()
         if not messagebox.askyesno(
                 "Confirmar", "¿Eliminar al usuario con todas sus reservas, visitas y prioridades?"):
             return
@@ -61,6 +70,5 @@ class PanelUsuarios(PanelBase):
 
     def refrescar(self) -> None:
         """Recarga la tabla de usuarios."""
-        self.tabla.cargar([(u.nombre, u.documento, u.programa)
+        self.tabla.cargar([(u.nombre, u.documento, u.programa, u.correo or "—")
                            for u in self.gym.listar_usuarios()])
-

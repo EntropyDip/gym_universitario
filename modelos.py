@@ -47,17 +47,29 @@ class Usuario:
     nombre: str
     documento: str
     programa: str
+    correo: str = ""
 
     def __post_init__(self) -> None:
         self.nombre = str(self.nombre).strip()
         self.documento = str(self.documento).strip()
         self.programa = str(self.programa).strip()
+        self.correo = str(self.correo).strip().lower()
         if not self.nombre:
             raise DatoVacioError("El nombre no puede quedar vacío.")
         if not self.documento:
             raise DatoVacioError("El documento no puede estar vacío.")
         if not self.programa:
             raise DatoVacioError("El programa académico no puede quedar vacío.")
+        # Validar correo solo si se proporcionó (campo opcional)
+        if self.correo:
+            from notificador import correo_valido  # import local para evitar ciclos
+            if not correo_valido(self.correo):
+                from excepciones import CorreoInvalidoError
+                raise CorreoInvalidoError(
+                    f"El correo '{self.correo}' no tiene un formato válido. "
+                    "Ejemplo: estudiante@udem.edu.co"
+                )
+
 
 
 @dataclass

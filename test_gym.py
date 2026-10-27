@@ -105,8 +105,27 @@ class TestUsuarios(unittest.TestCase):
         self.assertEqual(len(self.gym.listar_visitas()), 0)
         self.assertEqual(len(self.gym.listar_prioridades()), 0)
  
+    def test_correo_valido_se_almacena(self):
+        """El campo correo opcional se guarda correctamente y se puede consultar."""
+        self.gym.registrar_usuario("Ana Torres", "2001", "Medicina", "ana@udem.edu.co")
+        usuario = self.gym.usuarios.buscar("2001")
+        self.assertEqual(usuario.correo, "ana@udem.edu.co")
+ 
+    def test_correo_invalido_lanza_error(self):
+        """Un correo con formato incorrecto lanza CorreoInvalidoError."""
+        from excepciones import CorreoInvalidoError
+        with self.assertRaises(CorreoInvalidoError):
+            self.gym.registrar_usuario("Pedro Ruiz", "3001", "Ingeniería", "correo-sin-arroba")
+ 
+    def test_correo_omitido_es_opcional(self):
+        """Registrar un usuario sin correo es válido (campo opcional)."""
+        self.gym.registrar_usuario("Luis Pérez", "4001", "Derecho")
+        usuario = self.gym.usuarios.buscar("4001")
+        self.assertEqual(usuario.correo, "")
+ 
  
 class TestReservas(unittest.TestCase):
+
     """Pruebas de HU-02: Reservas de cupos (R3, R7, R8)."""
  
     def setUp(self):

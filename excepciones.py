@@ -55,3 +55,8 @@ class PrioridadNoCumpleError(GymError):
 
 class VisitaDuplicadaError(GymError):
     """El usuario ya tiene una visita registrada en esa fecha y horario."""
+
+
+class CorreoInvalidoError(GymError):
+    """El correo electrónico no tiene un formato válido."""
+

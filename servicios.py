@@ -32,7 +32,7 @@ class GymService:
         self.min_visitas_habitual: int = 3
         self.horas_limite_confirmacion: int = 2
         self.capacidad_maxima: int = capacidad_maxima
-                    
+        self.max_reservas_semana: int = 3            
         self.usuarios = usuarios
         self.reservas = reservas
         self.visitas = visitas
@@ -89,7 +89,8 @@ class GymService:
 
         # Validar que no tenga otra reserva activa en la misma fecha
         self._exigir_sin_reserva_activa(doc_limpio, usuario.nombre, fecha)
-
+        # Valiidar que no supere el límite de reservas activas por semana
+        self._exigir_limite_semanal(doc_limpio, usuario.nombre, fecha)
         # Validar que la franja no haya alcanzado el máximo de usuarios
         self._exigir_cupo(doc_limpio, horario_deseado, fecha)
 
@@ -127,7 +128,7 @@ class GymService:
             raise ReservaDuplicadaError(
                 f"{reserva.nombre_usuario} ya tiene este horario apartado con prioridad.")
         self._exigir_sin_reserva_activa(doc_limpio, reserva.nombre_usuario, fecha)
-        
+        self._exigir_limite_semanal(doc_limpio, reserva.nombre_usuario, fecha)
         self._exigir_cupo(doc_limpio, horario, fecha)
         return reserva.confirmar()
 
@@ -465,6 +466,19 @@ class GymService:
             if reserva.documento == documento and reserva.fecha == fecha and reserva.activa:
                 raise ReservaDuplicadaError(
                     f"El usuario {nombre} ya tiene una reserva activa el {fecha}.")
+                
+    def _exigir_limite_semanal(self, documento: str, nombre: str, fecha: str) -> None:
+        """Verifica que el usuario no supere las reservas activas permitidas por semana."""
+        semana = datetime.strptime(fecha, "%Y-%m-%d").isocalendar()[:2]
+        activas = [
+            r for r in self.listar_reservas()
+            if r.documento == documento and r.activa
+            and datetime.strptime(r.fecha, "%Y-%m-%d").isocalendar()[:2] == semana
+        ]
+        if len(activas) >= self.max_reservas_semana:
+            raise ReservaDuplicadaError(
+                f"{nombre} ya alcanzó el máximo de {self.max_reservas_semana} reservas "
+                f"activas en la semana de {fecha}.")
 
     def _liberar_prioridades_vencidas(self, hora_actual: datetime) -> None:
         """Elimina del sistema las prioridades sin confirmar que hayan superado el límite."""

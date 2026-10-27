@@ -19,7 +19,8 @@ gym_universitario/
 ├── excepciones.py       # Jerarquía formal de errores de dominio (heredan de GymError)
 ├── interfaz/            # Capa de Presentación: GUI desacoplada en Tkinter/ttk con gráficos embebidos
 │   ├── componentes.py       # Widgets reutilizables (PanelBase, TablaDatos, SelectorFecha, SelectorHorario)
-│   ├── ventana_principal.py # Ventana raíz contenedora con navegación por pestañas
+│   ├── logo.png             # Logotipo institucional (Universidad de Medellín)
+│   ├── ventana_principal.py # Ventana raíz contenedora con cabecera roja institucional (#D2232A) y pestañas
 │   ├── panel_usuarios.py    # Pantalla P1: Usuarios (R1, R2)
 │   ├── panel_reservas.py    # Pantalla P2: Reservas y Disponibilidad (R3, R7, R8, R9, R10, R14)
 │   ├── panel_visitas.py     # Pantalla P3: Asistencia y Equipos (R4)
@@ -39,9 +40,9 @@ gym_universitario/
 
 1. **`Usuario`**: representa al estudiante inscrito en el gimnasio (nombre, número de documento y programa académico).
 2. **`Reserva`**: representa el apartado de un cupo en un horario y fecha específicos (documento, nombre, horario, fecha, estado activo/cancelado). Cuenta con métodos para cancelar, confirmar/reactivar, comprobar titularidad y emitir resumen.
-3. **`Visita`**: registra la asistencia física y el uso efectivo de las instalaciones (documento, horario, duración en minutos, fecha y lista de equipos utilizados).
+3. **`Visita`**: registra la asistencia física y el uso efectivo de las instalaciones (documento, horario, duración en minutos entre 1 y 90, fecha y lista de equipos utilizados).
 4. **`Prioridad`**: representa un cupo exclusivo apartado preventivamente por un usuario de alta fidelidad (documento, nombre, horario, fecha, marca temporal de solicitud y estado de confirmación).
-5. **`GymService`**: orquestador central que administra las colecciones mediante repositorios inyectados, valida las reglas de negocio y gestiona el aforo y la agenda de franjas operativas (**08:00 AM a 08:00 PM**, cada 2 horas).
+5. **`GymService`**: orquestador central que administra las colecciones mediante repositorios inyectados, valida las reglas de negocio, controla el límite de hasta 3 reservas activas semanales (`max_reservas_semana = 3`), gestiona el aforo máximo de 15 usuarios por franja y la agenda de turnos operativos (**08:00 AM a 08:00 PM**, cada 2 horas).
 
 ---
 
@@ -51,12 +52,12 @@ gym_universitario/
 |:---:|---|:---:|---|
 | **R1** | `registrar_usuario` | Tipo 1 | Registra un nuevo estudiante validando formato de texto y unicidad de documento. |
 | **R2** | `eliminar_usuario` | Tipo 1 | Da de baja a un usuario validando coincidencia de nombre y documento, ejecutando la purga transaccional en cascada de sus reservas, visitas y prioridades *(Innovación Samuel Zapata)*. |
-| **R3** | `realizar_reserva` | Tipo 1 | Aparta un cupo en una fecha y franja horaria válida. Controla el límite de una reserva activa diaria por estudiante y el aforo máximo de 15 usuarios por franja. |
-| **R4** | `registrar_visita` | Tipo 1 | Registra la asistencia efectiva, duración (>0 min) y máquinas usadas. Fecha opcional (toma hoy por defecto) y previene visitas duplicadas en la misma franja y fecha. |
+| **R3** | `realizar_reserva` | Tipo 1 | Aparta un cupo en una fecha y franja horaria válida. Controla el límite de una reserva activa diaria, máximo 3 reservas activas semanales por estudiante y el aforo máximo de 15 usuarios por franja. |
+| **R4** | `registrar_visita` | Tipo 1 | Registra la asistencia efectiva, duración (1 a 90 min / 1:30 horas) y máquinas usadas. Fecha opcional (toma hoy por defecto) y previene visitas duplicadas en la misma franja y fecha. |
 | **R5** | `horario_mas_frecuente` | Tipo 2 | Calcula la franja horaria con mayor afluencia de visitas. |
 | **R6** | `programa_mas_frecuente` | Tipo 2 | Calcula la carrera universitaria con mayor número de estudiantes registrados. |
 | **R7** | `cancelar_reserva` | Tipo 1 | Cambia el estado de una reserva activa a cancelada, liberando inmediatamente un cupo en la franja. |
-| **R8** | `confirmar_reserva` | Tipo 1 | Reactiva una reserva previamente cancelada, validando disponibilidad de cupo y que el usuario no tenga otra reserva activa ese día *(Innovación Samuel Zapata)*. |
+| **R8** | `confirmar_reserva` | Tipo 1 | Reactiva una reserva previamente cancelada, validando aforo de 15, que el usuario no tenga otra reserva activa ese día ni supere las 3 reservas semanales *(Innovación Samuel Zapata)*. |
 | **R9** | `verificar_propietario_reserva` | Tipo 2 | Retorna «Sí» si el usuario cuenta con al menos una reserva (activa o histórica) en el sistema, o «No». |
 | **R10** | `mostrar_resumen_reserva` | Tipo 2 | Emite una síntesis textual detallada de la reserva más relevante del estudiante. |
 | **R11** | `promedio_duracion_por_usuario` | Tipo 2 | Calcula la duración media de permanencia por estudiante con precisión de un decimal *(Innovación Juan José Aguirre)*. |
@@ -71,18 +72,18 @@ gym_universitario/
 
 1. **Capacidad Máxima de 15 Usuarios por Franja**: Cada horario operativo (08:00 AM a 08:00 PM) admite un aforo máximo de 15 personas (`capacidad_maxima = 15`), contabilizando de forma unificada reservas activas, asistencias registradas y prioridades otorgadas. Si se intenta exceder el aforo, se lanza `CupoLlenoError`.
 2. **Cómputo Unificado de Ocupantes**: Si un estudiante tiene reserva y visita registrada en la misma franja y fecha, cuenta como **un único cupo ocupado**.
-3. **Máximo una Reserva Activa Diaria**: Un usuario no puede tener más de una reserva activa en una misma fecha del calendario (`ReservaDuplicadaError`).
+3. **Límite Diario y Semanal de Reservas**: Un usuario solo puede tener una reserva activa por fecha y hasta un máximo de 3 reservas activas por semana calendario bajo la norma ISO (`max_reservas_semana = 3`, `ReservaDuplicadaError`).
 4. **Validación de Calendario Gregoriano**: Las fechas deben ingresar en formato estricto `AAAA-MM-DD` y se valida matemáticamente su existencia real, incluyendo años bisiestos (`es_bisiesto` y `es_fecha_valida`).
 5. **No Duplicidad de Documentos**: No se permiten documentos duplicados en el registro de usuarios (`UsuarioYaRegistradoError`).
 6. **No Duplicidad de Visitas en la Misma Franja**: Un estudiante no puede tener registradas dos visitas en la misma fecha y horario (`VisitaDuplicadaError`).
-7. **Sesión de Visita Positiva**: La duración debe ser un número entero estrictamente mayor a 0 minutos (`DuracionInvalidaError`).
+7. **Sesión de Visita Válida**: La duración debe ser un número entero estrictamente mayor a 0 y menor o igual a 90 minutos (`DURACION_MAXIMA = 90`, correspondiente a 1:30 horas máximas, `DuracionInvalidaError`).
 8. **Condiciones de Prioridad y Caducidad**:
    - Para solicitar prioridad, el usuario debe tener ≥3 visitas históricas en ese mismo horario o acumular estrictamente más minutos que cualquier otro usuario (sin empates).
    - No puede solicitarse prioridad con menos de 2 horas de antelación respecto a la franja deseada.
    - La prioridad debe confirmarse con al menos 2 horas de anticipación. De lo contrario, caduca y se libera automáticamente.
    - La prioridad aparta 1 cupo garantizado para el estudiante, sin bloquear los cupos restantes de la franja.
 9. **Eliminación Transaccional en Cascada**: Dar de baja a un usuario purga de manera automática e inmediata todas sus reservas, visitas históricas y prioridades.
-10. **Desacoplamiento Absoluto Vista-Dominio**: La interfaz gráfica (`tkinter`/`ttk`) no contiene reglas de negocio ni validaciones algorítmicas; captura las excepciones de dominio (`GymError`) y las presenta amigablemente al usuario mediante cuadros de diálogo sin interrumpir la ejecución.
+10. **Desacoplamiento Absoluto Vista-Dominio e Identidad Visual**: La interfaz gráfica (`tkinter`/`ttk`) no contiene reglas de negocio; incorpora la identidad visual institucional de la Universidad de Medellín (cabecera `#D2232A` con logotipo y botones `#E0454C`), captura las excepciones de dominio (`GymError`) y las presenta mediante cuadros de diálogo sin interrumpir la ejecución.
 
 ---
 
@@ -92,12 +93,12 @@ Todas las excepciones heredan de la clase base `GymError`:
 
 - `DatoVacioError`: Campo obligatorio vacío o compuesto únicamente por espacios.
 - `FechaInvalidaError`: Fecha no existente en el calendario gregoriano o con formato erróneo.
-- `DuracionInvalidaError`: Duración de visita menor o igual a cero o no numérica.
+- `DuracionInvalidaError`: Duración de visita menor o igual a cero, no numérica o superior a 90 minutos (1:30 horas).
 - `UsuarioNoRegistradoError`: Documento no encontrado o nombre no coincidente al eliminar.
 - `UsuarioYaRegistradoError`: Intento de registrar un documento ya existente.
 - `HorarioInvalidoError`: Franja horaria no perteneciente a la agenda oficial.
 - `ReservaNoEncontradaError`: Intento de operar sobre una reserva inexistente.
-- `ReservaDuplicadaError`: Intento de registrar dos reservas activas el mismo día o reservar cuando ya se tiene prioridad en la franja.
+- `ReservaDuplicadaError`: Intento de registrar dos reservas activas el mismo día, más de 3 reservas en la misma semana o reservar cuando ya se tiene prioridad en la franja.
 - `PrioridadNoCumpleError`: Solicitud de prioridad sin cumplir visitas mínimas (≥3), sin mayor tiempo acumulado o con menos de 2 horas de antelación.
 - `PrioridadNoEncontradaError`: Intento de confirmar una prioridad no registrada.
 - `CupoLlenoError`: Franja horaria que ya alcanzó los 15 usuarios máximos permitidos.

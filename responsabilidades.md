@@ -99,11 +99,11 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 - **Requisitos:** R3, R7, R8.
 - **Criterios de aceptación:**
   1. Cada franja horaria admite hasta 15 usuarios concurrentes. Si se intenta reservar en una franja con 15 ocupantes, lanza `CupoLlenoError`.
-  2. Un usuario no puede tener más de una reserva activa en la misma fecha (`ReservaDuplicadaError`).
+  2. Un usuario no puede tener más de una reserva activa en la misma fecha ni más de 3 reservas activas en la misma semana calendario (`max_reservas_semana = 3`, `ReservaDuplicadaError`).
   3. Horarios no oficiales lanzan `HorarioInvalidoError`; fechas erróneas o irreales lanzan `FechaInvalidaError`.
   4. Quien ya cuenta con prioridad para la franja tiene su cupo garantizado; no requiere ni puede crear otra reserva (`ReservaDuplicadaError`).
   5. Cancelar una reserva activa libera inmediatamente 1 cupo para los demás usuarios. Si ya estaba cancelada, notifica sin generar error.
-  6. Confirmar (reactivar) una reserva previamente cancelada verifica que la franja no esté llena (`CupoLlenoError`) y que el usuario no tenga otra reserva activa ese día.
+  6. Confirmar (reactivar) una reserva previamente cancelada verifica que la franja no esté llena (`CupoLlenoError`), que el usuario no tenga otra reserva activa ese día ni supere las 3 reservas semanales (`ReservaDuplicadaError`).
 
 #### HU-03: Interfaz de usuarios y reservas, y ensamblaje general (5 puntos)
 - **Como:** Usuario y administrador del sistema.
@@ -129,7 +129,7 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 - **Criterios de aceptación:**
   1. Validación matemática de años bisiestos y días por mes (`es_bisiesto` y `es_fecha_valida`).
   2. El parámetro `fecha` es opcional; si no se especifica, toma la fecha actual del sistema.
-  3. Duración debe ser un entero positivo (>0 minutos); valores negativos, cero, no numéricos o booleanos lanzan `DuracionInvalidaError`.
+  3. Duración debe ser un entero positivo entre 1 y 90 minutos (1:30 horas máximas, `DURACION_MAXIMA = 90`); valores negativos, cero, booleanos, no numéricos o que superen los 90 minutos lanzan `DuracionInvalidaError`.
   4. Un mismo estudiante no puede registrar dos visitas en la misma fecha y franja horaria (`VisitaDuplicadaError`).
   5. Las visitas se contabilizan en el aforo de 15 personas de la franja (`CupoLlenoError` si está llena). Quien tiene reserva y visita en el mismo turno cuenta una sola vez.
   6. Limpieza y saneamiento de la lista de equipos utilizados.
@@ -187,11 +187,11 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 
 #### HU-09: Ventana principal, navegación y componentes base (5 puntos)
 - **Como:** Usuario del sistema.
-- **Quiero:** Una interfaz gráfica organizada en pestañas, selectores amigables y un diseño documentado en UML.
+- **Quiero:** Una interfaz gráfica organizada en pestañas, selectores amigables, identidad corporativa y un diseño documentado en UML.
 - **Para:** Navegar por todos los módulos del gimnasio con facilidad y claridad visual.
 - **Requisitos:** P1 a P5, `VentanaPrincipal`, `componentes.py`, diagrama de clases UML.
 - **Criterios de aceptación:**
-  1. `VentanaPrincipal` integra el cuaderno de pestañas (`ttk.Notebook`) y refresca automáticamente los paneles al seleccionarlos.
+  1. `VentanaPrincipal` integra el cuaderno de pestañas (`ttk.Notebook`), cabecera roja institucional de la Universidad de Medellín (`#D2232A`), logotipo corporativo (`interfaz/logo.png`), botones destacados en rojo (`#E0454C`) y refresco reactivo automático de paneles.
   2. `componentes.py` estandariza `PanelBase`, `TablaDatos` con scrollbar, `SelectorFecha` (con fallback de `tkcalendar`) y `SelectorHorario`.
   3. Diagrama de clases UML actualizado reflejando la arquitectura por capas, las entidades, `GymService`, repositorios y la jerarquía de 12 excepciones.
 
@@ -252,8 +252,8 @@ Ejecución: `python -m unittest test_gym.py -v`
 
 ### Etapa 2: Recorrido del Flujo de Punta a Punta en Consola e Interfaz
 Ejecución: `python main.py --consola` seguido de `python main.py --demo`
-- [x] **Paso 1 (Samuel y Juan José):** Registrar usuarios, validar unicidad de documento, registrar visitas con fecha explícita u omitida, comprobar `DuracionInvalidaError` (≤0) y `VisitaDuplicadaError`.
-- [x] **Paso 2 (Samuel):** Realizar reserva, validar límite de 1 reserva activa por fecha (`ReservaDuplicadaError`), cancelar y confirmar reactivación.
+- [x] **Paso 1 (Samuel y Juan José):** Registrar usuarios, validar unicidad de documento, registrar visitas con fecha explícita u omitida, comprobar `DuracionInvalidaError` (≤0 o >90 min) y `VisitaDuplicadaError`.
+- [x] **Paso 2 (Samuel):** Realizar reserva, validar límite de 1 reserva activa por fecha y máximo 3 reservas semanales (`ReservaDuplicadaError`), cancelar y confirmar reactivación.
 - [x] **Paso 3 (Juan José y Angelina):** Registrar ≥3 visitas en un mismo horario, solicitar prioridad de membresía y confirmar con antelación superior a 2 horas.
 - [x] **Paso 4 (Angelina y Samuel):** Comprobar que otros usuarios pueden reservar en la misma franja mientras haya cupos libres (< 15).
 - [x] **Paso 5 (Angelina):** Intentar confirmar una prioridad pasada la ventana de 2 horas previas y comprobar la liberación automática del cupo.

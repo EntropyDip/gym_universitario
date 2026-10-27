@@ -136,6 +136,12 @@ class TestReservas(unittest.TestCase):
         self.gym.realizar_reserva("1004", "08:00 AM", self.fecha)
         with self.assertRaises(ReservaDuplicadaError):
             self.gym.realizar_reserva("1004", "10:00 AM", self.fecha)
+
+        # Límite semanal de 3 reservas activas
+        self.gym.realizar_reserva("1004", "08:00 AM", "2026-11-11")
+        self.gym.realizar_reserva("1004", "08:00 AM", "2026-11-12")
+        with self.assertRaises(ReservaDuplicadaError):
+            self.gym.realizar_reserva("1004", "08:00 AM", "2026-11-13")
  
     def test_cancelar_y_confirmar_reserva(self):
         self.gym.realizar_reserva("1004", "08:00 AM", self.fecha)
@@ -191,7 +197,7 @@ class TestVisitasYFechas(unittest.TestCase):
         self.assertEqual(len(self.gym.listar_visitas()), 1)
  
     def test_registrar_visita_duracion_invalida(self):
-        for dur in [0, -15, True, False, "sesenta"]:
+        for dur in [0, -15, True, False, "sesenta", 91, 120]:
             with self.subTest(duracion=dur):
                 with self.assertRaises(DuracionInvalidaError):
                     self.gym.registrar_visita("1004", "08:00 AM", dur, ["Mancuernas"])

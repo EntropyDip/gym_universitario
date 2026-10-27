@@ -31,8 +31,8 @@ Esta dependencia del correo electrónico no solo afecta la experiencia del estud
 Para resolver esta problemática de forma integral, se diseñó e implementó una aplicación de escritorio desarrollada en **Python** bajo el paradigma de **Programación Orientada a Objetos**, con una **arquitectura por capas desacoplada** que asegura:
 
 1. **Gestión centralizada de usuarios:** registro validado por documento y eliminación transaccional en cascada de sus registros históricos.
-2. **Sistema dinámico de reservas y consulta de disponibilidad con control de aforo:** apartado de turnos en franjas continuas de **08:00 AM a 08:00 PM** con capacidad máxima parametrizable de hasta **15 usuarios simultáneos por franja horaria** (`capacidad_maxima = 15`), verificación en tiempo real de cupos (estados `LIBRE`, `PARCIAL` y `LLENO` con conteo numérico de ocupación y código de colores), desglose de ocupantes por franja (reservas, visitas y prioridades sin duplicar al estudiante multirrol) y control estricto de máximo una reserva activa diaria por estudiante.
-3. **Control operativo de visitas y fidelización:** registro de asistencias reales con duración en minutos, fecha (opcional con valor por defecto de hoy), máquinas utilizadas, prevención estricta de visitas duplicadas en la misma franja y fecha (`VisitaDuplicadaError`), junto con un sistema de prioridad de membresía para usuarios habituales (≥3 visitas) o con mayor tiempo acumulado, respaldado por una ventana de caducidad automática de 2 horas.
+2. **Sistema dinámico de reservas y consulta de disponibilidad con control de aforo:** apartado de turnos en franjas continuas de **08:00 AM a 08:00 PM** con capacidad máxima parametrizable de hasta **15 usuarios simultáneos por franja horaria** (`capacidad_maxima = 15`), verificación en tiempo real de cupos (estados `LIBRE`, `PARCIAL` y `LLENO` con conteo numérico de ocupación y código de colores), desglose de ocupantes por franja (reservas, visitas y prioridades sin duplicar al estudiante multirrol), control estricto de máximo una reserva activa diaria por estudiante y hasta 3 reservas activas por semana calendario (`max_reservas_semana = 3`).
+3. **Control operativo de visitas y fidelización:** registro de asistencias reales con duración en minutos (sesión positiva de hasta 90 minutos / 1:30 horas, `DURACION_MAXIMA = 90`), fecha (opcional con valor por defecto de hoy), máquinas utilizadas, prevención estricta de visitas duplicadas en la misma franja y fecha (`VisitaDuplicadaError`), junto con un sistema de prioridad de membresía para usuarios habituales (≥3 visitas) o con mayor tiempo acumulado, respaldado por una ventana de caducidad automática de 2 horas.
 4. **Módulo de analítica deportiva con gráficos en tiempo real:** cálculo de horarios pico, programas académicos con mayor demanda, tiempo medio de permanencia por estudiante y ranking de desgaste de maquinaria deportiva, integrando gráficos interactivos con `matplotlib`.
 5. **Robustez mediante manejo formal de excepciones:** separación tajante entre la lógica de negocio y la interfaz gráfica (`tkinter`/`ttk`), asegurando que ningún error del usuario cierre la aplicación y que las validaciones no dependan de la vista mediante una jerarquía de 12 excepciones derivadas de `GymError`.
 
@@ -105,9 +105,9 @@ Salida: El usuario identificado con 1004 se eliminó correctamente.
 |---|---|
 | **Identificador** | R3 |
 | **Actor** | Estudiante / Sistema |
-| **Resumen** | Aparta un cupo para un horario y fecha específicos, validando que el estudiante esté registrado, que el horario pertenezca a la franja operativa (08:00 AM a 08:00 PM), que la fecha sea válida en el calendario, que el aforo de 15 personas de la franja no esté lleno, que el usuario no tenga ya un cupo apartado con prioridad en esa franja y que el estudiante no tenga otra reserva activa ese día. |
+| **Resumen** | Aparta un cupo para un horario y fecha específicos, validando que el estudiante esté registrado, que el horario pertenezca a la franja operativa (08:00 AM a 08:00 PM), que la fecha sea válida en el calendario, que el aforo de 15 personas de la franja no esté lleno, que el usuario no tenga ya un cupo apartado con prioridad en esa franja, que el estudiante no tenga otra reserva activa ese día y que no supere el límite de 3 reservas activas en la misma semana calendario (`max_reservas_semana = 3`). |
 | **Entradas** | `documento` (texto), `horario_deseado` (texto en agenda), `fecha` (texto AAAA-MM-DD), `hora_actual` (datetime opcional). |
-| **Resultado** | **Tipo 1 (Modificación).** Registra una entidad `Reserva` en estado activa. Si viola alguna regla, lanza la excepción correspondiente (`UsuarioNoRegistradoError`, `FechaInvalidaError`, `HorarioInvalidoError`, `CupoLlenoError`, `ReservaDuplicadaError`). |
+| **Resultado** | **Tipo 1 (Modificación).** Registra una entidad `Reserva` en estado activa. Si viola alguna regla, lanza la excepción correspondiente (`UsuarioNoRegistradoError`, `FechaInvalidaError`, `HorarioInvalidoError`, `CupoLlenoError`, `ReservaDuplicadaError` por doble reserva el mismo día, cupo apartado con prioridad o superar las 3 reservas activas semanales). |
 | **Prototipo de interfaz** | Pantalla P2 (Reservas). Formulario con selector de fecha `DateEntry`, lista desplegable de horarios de 08:00 AM a 08:00 PM y botón «Reservar». |
 
 Ejemplo de uso / salida en consola:
@@ -128,9 +128,9 @@ Salida: ¡Reserva exitosa! Mariana Restrepo tiene su espacio a las 08:00 AM. El 
 |---|---|
 | **Identificador** | R4 |
 | **Actor** | Encargado del Gimnasio |
-| **Resumen** | Registra el acceso real de un estudiante a las instalaciones, guardando el horario de ingreso, la duración en minutos de la sesión, la fecha de visita (opcional, por defecto toma la fecha actual del sistema) y las máquinas o equipos utilizados. Previene que el mismo usuario registre dos visitas en la misma fecha y franja horaria. Contabiliza el acceso en el aforo de 15 usuarios de la franja. |
-| **Entradas** | `documento` (texto), `horario` (texto disponible), `duracion` (entero positivo > 0), `equipos` (lista de cadenas de texto), `fecha` (texto AAAA-MM-DD opcional), `hora_actual` (datetime opcional). |
-| **Resultado** | **Tipo 1 (Modificación).** Almacena una entidad `Visita`. Valida usuario registrado (`UsuarioNoRegistradoError`), horario disponible (`HorarioInvalidoError`), duración entera positiva excluyendo booleanos (`DuracionInvalidaError`), fecha gregoriana válida (`FechaInvalidaError`), visita no duplicada (`VisitaDuplicadaError`) y cupo disponible en la franja (`CupoLlenoError`). |
+| **Resumen** | Registra el acceso real de un estudiante a las instalaciones, guardando el horario de ingreso, la duración en minutos de la sesión (entero positivo de máximo 90 minutos / 1:30 horas, `DURACION_MAXIMA = 90`), la fecha de visita (opcional, por defecto toma la fecha actual del sistema) y las máquinas o equipos utilizados. Previene que el mismo usuario registre dos visitas en la misma fecha y franja horaria. Contabiliza el acceso en el aforo de 15 usuarios de la franja. |
+| **Entradas** | `documento` (texto), `horario` (texto disponible), `duracion` (entero positivo > 0 y <= 90), `equipos` (lista de cadenas de texto), `fecha` (texto AAAA-MM-DD opcional), `hora_actual` (datetime opcional). |
+| **Resultado** | **Tipo 1 (Modificación).** Almacena una entidad `Visita`. Valida usuario registrado (`UsuarioNoRegistradoError`), horario disponible (`HorarioInvalidoError`), duración entera positiva de máximo 90 minutos excluyendo booleanos (`DuracionInvalidaError`), fecha gregoriana válida (`FechaInvalidaError`), visita no duplicada (`VisitaDuplicadaError`) y cupo disponible en la franja (`CupoLlenoError`). |
 | **Prototipo de interfaz** | Pantalla P3 (Visitas). Formulario con selector de fecha, checkboxes para equipos comunes, campo para otros equipos y tabla histórica de asistencias. |
 
 Ejemplo de uso / salida en consola:
@@ -214,9 +214,9 @@ Salida: Reserva de Mariana Restrepo a las 08:00 AM cancelada.
 |---|---|
 | **Identificador** | R8 |
 | **Actor** | Estudiante / Sistema |
-| **Resumen** | Reactiva una reserva previamente cancelada, validando que la franja horaria no haya alcanzado el aforo máximo de 15 usuarios, que el usuario no tenga ya prioridad en la franja y que no genere conflicto de dos reservas activas el mismo día. |
+| **Resumen** | Reactiva una reserva previamente cancelada, validando que la franja horaria no haya alcanzado el aforo máximo de 15 usuarios, que el usuario no tenga ya prioridad en la franja, que no genere conflicto de dos reservas activas el mismo día y que no supere el límite de 3 reservas activas en la misma semana calendario (`max_reservas_semana = 3`). |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto), `hora_actual` (opcional). |
-| **Resultado** | **Tipo 1 (Modificación).** La reserva pasa a `activa = True`. Lanza `CupoLlenoError` si la franja completó los 15 usuarios o `ReservaDuplicadaError` si ya cuenta con otra reserva activa ese día o prioridad en la franja. |
+| **Resultado** | **Tipo 1 (Modificación).** La reserva pasa a `activa = True`. Lanza `CupoLlenoError` si la franja completó los 15 usuarios o `ReservaDuplicadaError` si ya cuenta con otra reserva activa ese día, prioridad en la franja o alcanzó el límite de 3 reservas activas semanales. |
 | **Prototipo de interfaz** | Pantalla P2 (Reservas). Botón «Confirmar». |
 
 Ejemplo de uso / salida en consola:
@@ -402,7 +402,10 @@ Ranking completo: [('Mancuernas', 3), ('Cinta De Correr', 1), ('Poleas', 1), ('B
 
 ### 2.2 Resumen de prototipos de pantalla (P1 a P5)
 
-La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un contenedor principal con pestañas (`ttk.Notebook`):
+La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un contenedor principal con pestañas (`ttk.Notebook`), adoptando la identidad visual institucional de la Universidad de Medellín:
+- **Cabecera institucional:** marco superior con fondo rojo distintivo (`ROJO_LOGO = "#D2232A"`), logotipo corporativo (`interfaz/logo.png`) escalado proporcionalmente a la izquierda, título del gimnasio en fuente Segoe UI 16 negrita en color blanco y subtítulo informativo con la franja operativa y duración máxima.
+- **Botones de acción unificados:** estilizados con estilo `TButton` en tono rojo (`ROJO_PALIDO = "#E0454C"`), texto blanco en negrita y realce interactivo al posar el cursor (`ROJO_HOVER = "#EF9A9A"`).
+- **Semáforo dinámico de aforo:** codificación por color en la tabla de disponibilidad (verde `#d9f2d9` para estado libre, amarillo `#fff2cc` para parcial y rojo `#f8d7da` para lleno).
 
 | Pantalla | Requisitos atendidos | Componentes visuales principales |
 |---|---|---|
@@ -461,7 +464,7 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 | **Reserva** | `activa` | `bool` | `True` si la reserva está vigente, `False` si fue cancelada. |
 | **Visita** | `documento` | `str` | Documento de usuario registrado. |
 | **Visita** | `horario` | `str` | Franja horaria de la visita. |
-| **Visita** | `duracion` | `int` | Entero positivo estrictamente mayor a 0 minutos (excluye booleanos). |
+| **Visita** | `duracion` | `int` | Entero positivo estrictamente mayor a 0 y menor o igual a 90 minutos (`DURACION_MAXIMA = 90`, equivalente a 1:30 horas, excluye booleanos). |
 | **Visita** | `equipos` | `list[str]` | Lista de máquinas y accesorios utilizados (limpia de vacíos). |
 | **Visita** | `fecha` | `str` | Cadena AAAA-MM-DD (opcional en servicio, por defecto fecha de hoy). |
 | **Prioridad** | `documento` | `str` | Documento del usuario con membresía preferencial. |
@@ -473,6 +476,7 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 | **GymService** | `horarios_disponibles` | `list[str]` | `["08:00 AM", "10:00 AM", "12:00 PM", "02:00 PM", "04:00 PM", "06:00 PM", "08:00 PM"]`. |
 | **GymService** | `duracion_maxima_sesion` | `str` | «1:30 horas». |
 | **GymService** | `capacidad_maxima` | `int` | `15` (máximo de usuarios permitidos concurrentemente en cada franja). |
+| **GymService** | `max_reservas_semana` | `int` | `3` (máximo de reservas activas permitidas por estudiante en una misma semana calendario). |
 | **GymService** | `min_visitas_habitual` | `int` | `3` (visitas mínimas requeridas en ese horario para ser habitual). |
 | **GymService** | `horas_limite_confirmacion` | `int` | `2` (horas de antelación obligatorias para confirmar prioridad). |
 
@@ -492,14 +496,14 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 
 - **RN1 (unicidad de documento):** no se permite registrar dos usuarios con el mismo número de documento.
 - **RN2 (franjas oficiales):** los únicos horarios disponibles para reservas y visitas son: `08:00 AM`, `10:00 AM`, `12:00 PM`, `02:00 PM`, `04:00 PM`, `06:00 PM` y `08:00 PM`.
-- **RN3 (límite diario de reservas):** un estudiante puede tener múltiples reservas en distintas fechas, pero solo puede tener **una reserva activa por fecha**.
-- **RN4 (tiempo máximo de sesión):** cada franja autoriza un tiempo máximo de permanencia de **1:30 horas**.
+- **RN3 (límite diario y semanal de reservas):** un estudiante puede tener múltiples reservas en distintas fechas, pero solo puede tener **una reserva activa por fecha** y un máximo de **3 reservas activas por semana calendario** (`max_reservas_semana = 3`). Si intenta superar alguno de estos límites, el sistema lanza `ReservaDuplicadaError`.
+- **RN4 (tiempo máximo de sesión):** cada franja autoriza un tiempo máximo de permanencia de **1:30 horas** (90 minutos, constante `DURACION_MAXIMA = 90`).
 - **RN5 (criterios de prioridad):** se otorga prioridad sobre un horario a quien sea usuario habitual (≥3 visitas registradas a esa misma hora, sin importar la fecha) o quien acumule estrictamente más minutos totales de uso que cualquier otro usuario (en caso de empate, el criterio de tiempo se anula).
 - **RN6 (ventana de caducidad de prioridad):** el cupo apartado con prioridad debe confirmarse con al menos **2 horas de antelación** al inicio de la sesión. Si no se confirma a tiempo, el cupo caduca y se libera automáticamente.
 - **RN7 (exclusividad individual de la prioridad dentro del aforo compartido):** un cupo apartado con prioridad vigente garantiza un cupo reservado para el titular dentro de los 15 permitidos en la franja. El resto de la comunidad puede reservar los cupos restantes hasta completar el aforo.
 - **RN8 (calendario gregoriano estricto):** las fechas deben ingresar en formato `AAAA-MM-DD` y existir matemáticamente en el calendario, contemplando años bisiestos.
 - **RN9 (eliminación en cascada):** la eliminación de un usuario remueve automáticamente todas sus reservas, visitas y prioridades asociadas.
-- **RN10 (sesión positiva):** toda visita debe registrar una duración mayor a 0 minutos.
+- **RN10 (duración de sesión válida):** toda visita debe registrar una duración mayor a 0 minutos y no superior a 90 minutos (`DURACION_MAXIMA = 90`, correspondiente a 1:30 horas de sesión máxima). Valores menores o iguales a 0, booleanos, no numéricos o que superen los 90 minutos lanzan `DuracionInvalidaError`.
 - **RN11 (aforo máximo por franja horaria):** cada franja admite como máximo **15 usuarios simultáneos** (`capacidad_maxima = 15`), unificando reservas activas, asistencias registradas y prioridades vigentes. Si se intenta sobrepasar este límite, el sistema lanza `CupoLlenoError`.
 - **RN12 (no duplicidad de visitas en la misma franja y fecha):** un usuario no puede registrar dos visitas en la misma fecha y franja horaria (`VisitaDuplicadaError`).
 
@@ -513,12 +517,12 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 |---|---|---|
 | **R1** | `GymService.registrar_usuario` | Verifica no existencia del documento; instancia `Usuario` (valida textos no vacíos y aplica `strip`); persiste en `UsuarioRepositorio.agregar`. |
 | **R2** | `GymService.eliminar_usuario` | Valida coincidencia de nombre y documento; llama a `eliminar_por_documento` en repositorios de reservas, visitas y prioridades; elimina de usuarios. |
-| **R3** | `GymService.realizar_reserva` | Valida usuario; valida fecha y bisiestos; purga prioridades vencidas; valida horario oficial; valida que el usuario no tenga ya prioridad en la franja; valida ausencia de reserva activa en esa fecha; valida que el aforo no supere los 15 usuarios (`_exigir_cupo`); crea y almacena `Reserva`. |
-| **R4** | `GymService.registrar_visita` | Valida usuario; valida horario y fecha (opcional, hoy por defecto); valida que no exista visita duplicada en misma franja y fecha (`VisitaDuplicadaError`); purga prioridades vencidas; valida aforo de 15 usuarios; instancia `Visita` (valida duración > 0 y limpia lista de máquinas); almacena en `VisitaRepositorio.agregar`. |
+| **R3** | `GymService.realizar_reserva` | Valida usuario; valida fecha y bisiestos; purga prioridades vencidas; valida horario oficial; valida que el usuario no tenga ya prioridad en la franja; valida ausencia de reserva activa en esa fecha; valida no superar el límite de 3 reservas activas por semana (`_exigir_limite_semanal`); valida que el aforo no supere los 15 usuarios (`_exigir_cupo`); crea y almacena `Reserva`. |
+| **R4** | `GymService.registrar_visita` | Valida usuario; valida horario y fecha (opcional, hoy por defecto); valida que no exista visita duplicada en misma franja y fecha (`VisitaDuplicadaError`); purga prioridades vencidas; valida aforo de 15 usuarios; instancia `Visita` (valida 0 < duración <= 90 minutos y limpia lista de máquinas); almacena en `VisitaRepositorio.agregar`. |
 | **R5** | `GymService.horario_mas_frecuente` | Itera sobre visitas, totaliza frecuencia por franja horaria y retorna la moda estadística. |
 | **R6** | `GymService.programa_mas_frecuente` | Itera sobre usuarios, totaliza por programa académico y determina la carrera con mayor cantidad de inscritos. |
 | **R7** | `GymService.cancelar_reserva` | Localiza la reserva por documento, horario y fecha (priorizando la activa); invoca `Reserva.cancelar()`, liberando un cupo para la franja. |
-| **R8** | `GymService.confirmar_reserva` | Localiza la reserva cancelada; purga prioridades vencidas; verifica que el usuario no tenga prioridad en la franja ni otra reserva activa en la fecha; valida que la franja no esté llena (máximo 15); invoca `Reserva.confirmar()`. |
+| **R8** | `GymService.confirmar_reserva` | Localiza la reserva cancelada; purga prioridades vencidas; verifica que el usuario no tenga prioridad en la franja ni otra reserva activa en la fecha; valida límite semanal de 3 reservas (`_exigir_limite_semanal`); valida que la franja no esté llena (máximo 15); invoca `Reserva.confirmar()`. |
 | **R9** | `GymService.verificar_propietario_reserva` | Examina la colección de reservas y retorna «Sí» si existe coincidencia de titularidad, o «No». |
 | **R10** | `GymService.mostrar_resumen_reserva` | Obtiene las reservas del documento; selecciona la más reciente/activa e invoca `Reserva.mostrar_resumen()`. Si no hay reservas, lanza excepción. |
 | **R11** | `GymService.promedio_duracion_por_usuario` / `datos_promedio_duracion` | Agrupa minutos y cantidad de asistencias por documento; calcula media con un decimal; estructura tuplas para interfaz y gráficos de `matplotlib`. |
@@ -552,7 +556,8 @@ gym_universitario/
 └── interfaz/                    # Capa de presentación desacoplada (Tkinter/ttk)
     ├── __init__.py              # Paquete Python
     ├── componentes.py           # PanelBase, TablaDatos, SelectorFecha, SelectorHorario
-    ├── ventana_principal.py     # Ventana raíz contenedora con ttk.Notebook
+    ├── logo.png                 # Logotipo institucional del gimnasio / Universidad de Medellín
+    ├── ventana_principal.py     # Ventana raíz contenedora con cabecera roja (#D2232A) y ttk.Notebook
     ├── panel_usuarios.py        # Pantalla P1: Usuarios (R1, R2)
     ├── panel_reservas.py        # Pantalla P2: Reservas y Disponibilidad (R3, R7, R8, R9, R10, R14)
     ├── panel_visitas.py         # Pantalla P3: Asistencia y Equipos (R4)
@@ -567,10 +572,10 @@ gym_universitario/
 | Documento ya registrado en el sistema (R1) | `UsuarioYaRegistradoError` | `messagebox.showerror("Error de negocio", mensaje)` |
 | Documento inexistente o nombre que no coincide (R2, R3, R4, R12) | `UsuarioNoRegistradoError` | Notificación en diálogo emergente sin cerrar la ventana |
 | Campo obligatorio vacío o solo espacios en blanco | `DatoVacioError` | Notificación al usuario indicando el campo faltante |
-| Duración menor o igual a 0 o no numérica (R4) | `DuracionInvalidaError` | Alerta indicando que la duración debe ser entera positiva |
+| Duración menor o igual a 0, no numérica o mayor a 90 minutos (R4) | `DuracionInvalidaError` | Alerta indicando que la duración debe ser entera positiva y máximo 90 minutos (1:30 horas) |
 | Horario fuera de la franja oficial (R3, R4, R12) | `HorarioInvalidoError` | Muestra lista de horarios disponibles permitidos |
 | Fecha inexistente o año no bisiesto (R3, R4, R12, R14) | `FechaInvalidaError` | Notificación de formato estricto AAAA-MM-DD |
-| Segunda reserva activa el mismo día para un usuario (R3, R8) | `ReservaDuplicadaError` | Alerta de límite de una reserva diaria o reserva redundante con prioridad |
+| Segunda reserva activa el mismo día o más de 3 reservas activas en la misma semana (R3, R8) | `ReservaDuplicadaError` | Alerta de límite de una reserva diaria, máximo 3 reservas semanales o reserva redundante con prioridad |
 | Franja horaria con aforo completo de 15 usuarios (R3, R4, R8, R12) | `CupoLlenoError` | Alerta indicando que el horario ya alcanzó el máximo de 15 usuarios |
 | Visita duplicada para un usuario en misma fecha y horario (R4) | `VisitaDuplicadaError` | Alerta indicando que el usuario ya tiene asistencia en ese turno |
 | No cumple visitas habituales ni mayor tiempo acumulado (R12) | `PrioridadNoCumpleError` | Explicación detallada de los requisitos de fidelidad o antelación |
@@ -591,9 +596,9 @@ gym_universitario/
 
 ### 4.2 Requisitos funcionales innovadores / «interesantes»
 
-1. **Samuel Zapata Trujillo (R8, R2 y control de aforo):** mecanismo de reactivación concurrente de reservas con validación de capacidad máxima de 15 usuarios por franja (`CupoLlenoError`), y motor de eliminación transaccional en cascada que purga de forma atómica reservas, visitas y prioridades del usuario.
-2. **Juan José Aguirre Durango (R11, R15 y prevención de duplicados):** motor analítico de agregación estadística sobre duración de permanencia y ranking de maquinaria con normalización textual y renderizado gráfico interactivo en tiempo real mediante `matplotlib`, complementado con validación estricta de visitas duplicadas (`VisitaDuplicadaError`) y fecha opcional.
-3. **Angelina Negrette Diaz (R12, R13 y disponibilidad con ocupantes):** sistema dinámico de prioridad de membresía basado en fidelidad habitual (≥3 visitas) y desempate estricto por tiempo acumulado, respaldado por una ventana de caducidad automática de 2 horas previas a la sesión, junto con la consulta en tiempo real de disponibilidad por niveles (`LIBRE`, `PARCIAL`, `LLENO`) y visualización simultánea de la lista de ocupantes de la franja.
+1. **Samuel Zapata Trujillo (R8, R2, control de aforo y límite semanal):** mecanismo de reactivación concurrente de reservas con validación de capacidad máxima de 15 usuarios por franja (`CupoLlenoError`), control de equidad de hasta 3 reservas activas por semana calendario (`_exigir_limite_semanal`), y motor de eliminación transaccional en cascada que purga de forma atómica reservas, visitas y prioridades del usuario.
+2. **Juan José Aguirre Durango (R11, R15, prevención de duplicados y tope de sesión):** motor analítico de agregación estadística sobre duración de permanencia y ranking de maquinaria con normalización textual y renderizado gráfico interactivo en tiempo real mediante `matplotlib`, complementado con validación estricta de visitas duplicadas (`VisitaDuplicadaError`), control de permanencia máxima de hasta 90 minutos (`DURACION_MAXIMA = 90`) y fecha opcional.
+3. **Angelina Negrette Diaz (R12, R13, disponibilidad con ocupantes e identidad visual):** sistema dinámico de prioridad de membresía basado en fidelidad habitual (≥3 visitas) y desempate estricto por tiempo acumulado, respaldado por una ventana de caducidad automática de 2 horas previas a la sesión, junto con la consulta en tiempo real de disponibilidad por niveles (`LIBRE`, `PARCIAL`, `LLENO`), visualización simultánea de la lista de ocupantes de la franja e integración de la identidad visual roja institucional de la Universidad de Medellín con logotipo corporativo.
 
 ### 4.3 Comportamiento de pantalla: carga reactiva sin datos mock por defecto
 

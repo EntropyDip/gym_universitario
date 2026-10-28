@@ -27,8 +27,8 @@ La entrega pide diseño e implementación completa, manejo riguroso de excepcion
 - **Consistencia nominal con el documento de análisis.** Clases, atributos, excepciones y métodos conservan rigurosamente la nomenclatura descrita en las especificaciones del documento técnico.
 - **Estilo y calidad de código.** Convención PEP 8 (`snake_case` para funciones/variables, `PascalCase` para clases), tipado estático asistido (`typing`), docstrings explicativos en cada módulo, clase y método público.
 - **Librerías externas y degradación elegante.** `matplotlib` y `tkcalendar`, registradas en `requirements.txt`, con manejo de excepciones por importación para garantizar que la aplicación continúe operando si alguna no está presente.
-- **Cobertura de pruebas unitarias.** Suite automatizada con `unittest` que cubre 55 pruebas en total, abarcando casos de éxito, bordes, límites de aforo y situaciones anómalas.
-- **Público objetivo y roles de usuario:** El sistema es una aplicación administrativa de escritorio concebida para dos perfiles clave de la Universidad de Medellín: el **Encargado de las reservas** (operación diaria: censo de usuarios, asignación/cancelación de reservas, registro de visitas en recepción y validación de prioridades) y el **Jefe de deportes** (supervisión y toma de decisiones: análisis de aforos, métricas de horarios pico, carreras más activas y desgaste de maquinaria).
+- **Cobertura de pruebas unitarias.** Suite automatizada con `unittest` que cubre 58 pruebas en total, abarcando casos de éxito, bordes, límites de aforo y situaciones anómalas.
+- **Público objetivo y roles de usuario:** El sistema es una aplicación administrativa de escritorio de uso exclusivo del **Administrador / Encargado** de la Universidad de Medellín, únicos encargados de manejar el programa (censo de usuarios, asignación/cancelación de reservas, registro de visitas, validación de prioridades y análisis de aforos, horarios pico, carreras más activas y desgaste de maquinaria). Los estudiantes no operan el sistema.
 
 ---
 
@@ -42,7 +42,8 @@ El proyecto comprende 15 requisitos funcionales formales distribuidos de manera 
 | **Juan José Aguirre Durango** | Módulo 2: Visitas, Calendario y Estadísticas | R4, R5, R6, R11, R15 | `es_bisiesto`, `es_fecha_valida`, `Visita`, `VisitaRepositorio`, `PanelVisitas`, `PanelEstadisticas` (KPIs y gráficos con `matplotlib`) | 18 |
 | **Angelina Negrette Diaz** | Módulo 3: Prioridades, Consultas y Diseño de Interfaz | R9, R10, R12, R13, R14 | `Prioridad`, `PrioridadRepositorio`, `VentanaPrincipal`, `componentes.py`, `PanelPrioridades`, disponibilidad y ocupantes de franja, diagrama de clases UML | 18 |
 
-- **Componentes compartidos:** `excepciones.py` (enriquecido con las excepciones de cada módulo), `test_gym.py` (cada integrante aporta las clases de prueba de su módulo hasta consolidar los 55 tests), `requirements.txt` y `README.md`.
+- **Componentes compartidos:** `excepciones.py` (enriquecido con las excepciones de cada módulo), `test_gym.py` (cada integrante aporta las clases de prueba de su módulo hasta consolidar los 58 tests), `requirements.txt` y `README.md`.
+- **Notificaciones por correo:** `notificador.py` envía la confirmación de reserva (R3 y R8) a los usuarios que tienen correo registrado, mediante SMTP de Gmail en un hilo secundario y con credenciales en las variables de entorno `GYM_EMAIL_REMITENTE` y `GYM_EMAIL_PASSWORD`; sin credenciales, el envío se omite sin errores.
 - **Interoperabilidad:** El panel de reservas de Samuel consulta la disponibilidad y ocupantes desarrollados con Angelina (R14) e integra los botones de R9 y R10. El cálculo de prioridades de Angelina consulta el historial de visitas implementado por Juan José.
 
 ---
@@ -82,19 +83,20 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 **Módulo:** Usuarios, Reservas, Aforo y Ensamblaje
 
 #### HU-01: Registro y eliminación de usuarios (5 puntos)
-- **Como:** Encargado de las reservas / Jefe de deportes.
+- **Como:** Administrador / Encargado.
 - **Quiero:** Registrar estudiantes con sus datos académicos y darlos de baja junto con sus registros asociados.
 - **Para:** Mantener un censo oficial, limpio y sin duplicados en las instalaciones deportivas.
 - **Requisitos:** R1, R2.
 - **Criterios de aceptación:**
   1. El documento es único; un documento repetido lanza `UsuarioYaRegistradoError` sin alterar el repositorio.
   2. Nombre, documento o programa vacíos (o solo espacios) lanzan `DatoVacioError`.
+  2.1. El correo electrónico es opcional; si se indica con formato inválido lanza `CorreoInvalidoError`, y si es válido se almacena en minúsculas.
   3. Eliminar con datos erróneos o inexistentes lanza `UsuarioNoRegistradoError`.
   4. Al eliminar un usuario por coincidencia de nombre y documento, se eliminan en cascada sus reservas, visitas y prioridades.
   5. Saneamiento automático de espacios en blanco (`strip()`).
 
 #### HU-02: Reservas de cupos y control de aforo (8 puntos)
-- **Como:** Encargado de las reservas (a solicitud del estudiante).
+- **Como:** Administrador / Encargado.
 - **Quiero:** Reservar, cancelar y reactivar turnos en la agenda del gimnasio.
 - **Para:** Garantizar el aforo ordenado de 15 cupos y asegurar el turno de entrenamiento sin depender de correos electrónicos.
 - **Requisitos:** R3, R7, R8.
@@ -105,9 +107,10 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   4. Quien ya cuenta con prioridad para la franja tiene su cupo garantizado; no requiere ni puede crear otra reserva (`ReservaDuplicadaError`).
   5. Cancelar una reserva activa libera inmediatamente 1 cupo para los demás usuarios. Si ya estaba cancelada, notifica sin generar error.
   6. Confirmar (reactivar) una reserva previamente cancelada verifica que la franja no esté llena (`CupoLlenoError`), que el usuario no tenga otra reserva activa ese día ni supere las 3 reservas semanales (`ReservaDuplicadaError`).
+  7. Si el usuario tiene correo registrado, al reservar o reactivar se envía la confirmación por correo en un hilo secundario; sin credenciales configuradas, se omite sin afectar la operación.
 
 #### HU-03: Interfaz de usuarios y reservas, y ensamblaje general (5 puntos)
-- **Como:** Encargado de las reservas y Jefe de deportes.
+- **Como:** Administrador / Encargado.
 - **Quiero:** Paneles gráficos para gestionar usuarios y reservas, y un punto de entrada flexible.
 - **Para:** Operar el gimnasio intuitivamente y validar su funcionamiento en diferentes entornos.
 - **Requisitos:** R1, R2, R3, R7, R8 (pantallas P1 y P2), ensamblaje en `main.py`.
@@ -123,7 +126,7 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 **Módulo:** Visitas, Calendario y Estadísticas
 
 #### HU-04: Registro de visitas y calendario gregoriano (5 puntos)
-- **Como:** Encargado de las reservas (control de acceso y recepción del gimnasio).
+- **Como:** Administrador / Encargado.
 - **Quiero:** Registrar la asistencia real de cada estudiante indicando horario, duración y maquinaria utilizada.
 - **Para:** Cuantificar el flujo real de deportistas y alimentar los modelos estadísticos institucionales.
 - **Requisitos:** R4.
@@ -136,7 +139,7 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   6. Limpieza y saneamiento de la lista de equipos utilizados.
 
 #### HU-05: Estadísticas de uso y analítica deportiva (8 puntos)
-- **Como:** Jefe de deportes (con apoyo del encargado de reservas).
+- **Como:** Administrador / Encargado.
 - **Quiero:** Conocer horarios pico, programas más frecuentes, tiempo promedio por usuario y ranking de maquinaria.
 - **Para:** Tomar decisiones sobre mantenimiento preventivo de máquinas, dotación presupuestal y optimización de espacios.
 - **Requisitos:** R5, R6, R11, R15.
@@ -147,7 +150,7 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   4. `equipo_mas_utilizado` y `ranking_equipos` consolidan el uso de maquinaria normalizando nombres (insensible a mayúsculas/minúsculas).
 
 #### HU-06: Interfaz de visitas y visualización analítica (5 puntos)
-- **Como:** Encargado de las reservas y Jefe de deportes.
+- **Como:** Administrador / Encargado.
 - **Quiero:** Una pantalla de captura rápida de visitas y un panel analítico con gráficos interactivos.
 - **Para:** Monitorear el aforo del gimnasio en tiempo real y auditar métricas deportivas.
 - **Requisitos:** R4, R5, R6, R11, R15 (pantallas P3 y P5).
@@ -162,7 +165,7 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 **Módulo:** Prioridades, Consultas y Diseño de Interfaz
 
 #### HU-07: Consultas de titularidad, resumen y disponibilidad (5 puntos)
-- **Como:** Encargado de las reservas (a solicitud del estudiante) y Jefe de deportes.
+- **Como:** Administrador / Encargado.
 - **Quiero:** Saber si un estudiante tiene reservas, consultar su resumen y revisar qué horarios tienen cupos libres u ocupantes.
 - **Para:** Atender oportunamente las consultas de los usuarios y verificar el estado del aforo en tiempo real.
 - **Requisitos:** R9, R10, R14.
@@ -174,7 +177,7 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   5. En `PanelReservas`, al hacer clic en una franja de la tabla de disponibilidad, se actualiza automáticamente la tabla de ocupantes contigua.
 
 #### HU-08: Sistema dinámico de prioridades de membresía (8 puntos)
-- **Como:** Encargado de las reservas (a solicitud del estudiante habitual).
+- **Como:** Administrador / Encargado.
 - **Quiero:** Apartar un cupo con exclusividad temporal para asegurar el turno de usuarios fieles o constantes.
 - **Para:** Reconocer la disciplina deportiva y garantizar cupos conforme a las reglas de membresía.
 - **Requisitos:** R12, R13.
@@ -187,14 +190,14 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
   6. `listar_prioridades_vigentes` depura automáticamente las prioridades caducadas antes de listarlas.
 
 #### HU-09: Ventana principal, navegación y componentes base (5 puntos)
-- **Como:** Encargado de las reservas y Jefe de deportes.
+- **Como:** Administrador / Encargado.
 - **Quiero:** Una interfaz gráfica organizada en pestañas, selectores amigables, identidad corporativa y un diseño documentado en UML.
 - **Para:** Operar todos los módulos del gimnasio con facilidad, agilidad y consistencia visual institucional.
 - **Requisitos:** P1 a P5, `VentanaPrincipal`, `componentes.py`, diagrama de clases UML.
 - **Criterios de aceptación:**
   1. `VentanaPrincipal` integra el cuaderno de pestañas (`ttk.Notebook`), cabecera roja institucional de la Universidad de Medellín (`#D2232A`), logotipo corporativo (`interfaz/logo.png`), botones destacados en rojo (`#E0454C`) y refresco reactivo automático de paneles.
   2. `componentes.py` estandariza `PanelBase`, `TablaDatos` con scrollbar, `SelectorFecha` (con fallback de `tkcalendar`) y `SelectorHorario`.
-  3. Diagrama de clases UML actualizado reflejando la arquitectura por capas, las entidades, `GymService`, repositorios y la jerarquía de 12 excepciones.
+  3. Diagrama de clases UML actualizado reflejando la arquitectura por capas, las entidades, `GymService`, repositorios y la jerarquía de 13 excepciones.
 
 ---
 
@@ -240,12 +243,12 @@ Nadie aprueba ni fusiona su propio Pull Request. El ciclo rotativo de revisión 
 
 La verificación del sistema se realiza en dos etapas formales:
 
-### Etapa 1: Suite Automatizada de Pruebas Unitarias (55 tests)
+### Etapa 1: Suite Automatizada de Pruebas Unitarias (58 tests)
 Ejecución: `python -m unittest test_gym.py -v`
 - [x] 14 pruebas de aforo y concurrencia (`TestCapacidadPorFranja`).
 - [x] 11 pruebas de prioridades y caducidad temporal (`TestPrioridades`).
 - [x] 7 pruebas de ciclo de vida de reservas (`TestReservas`).
-- [x] 7 pruebas de gestión y purga en cascada de usuarios (`TestUsuarios`).
+- [x] 10 pruebas de gestión de usuarios (incluido el correo opcional) y purga en cascada (`TestUsuarios`).
 - [x] 6 pruebas de visitas, fechas gregorianas y años bisiestos (`TestVisitasYFechas`).
 - [x] 4 pruebas de analítica y métricas estadísticas (`TestEstadisticas`).
 - [x] 3 pruebas de consultas y disponibilidad (`TestConsultasYDisponibilidad`).

@@ -30,16 +30,14 @@ Esta dependencia del correo electrónico no solo afecta la experiencia del estud
 
 Para resolver esta problemática de forma integral, se diseñó e implementó una aplicación de escritorio desarrollada en **Python** bajo el paradigma de **Programación Orientada a Objetos**, con una **arquitectura por capas desacoplada** que asegura:
 
-1. **Gestión centralizada de usuarios:** registro validado por documento y eliminación transaccional en cascada de sus registros históricos.
+1. **Gestión centralizada de usuarios:** registro validado por documento (con correo electrónico opcional validado para enviar confirmaciones de reserva) y eliminación transaccional en cascada de sus registros históricos.
 2. **Sistema dinámico de reservas y consulta de disponibilidad con control de aforo:** apartado de turnos en franjas continuas de **08:00 AM a 08:00 PM** con capacidad máxima parametrizable de hasta **15 usuarios simultáneos por franja horaria** (`capacidad_maxima = 15`), verificación en tiempo real de cupos (estados `LIBRE`, `PARCIAL` y `LLENO` con conteo numérico de ocupación y código de colores), desglose de ocupantes por franja (reservas, visitas y prioridades sin duplicar al estudiante multirrol), control estricto de máximo una reserva activa diaria por estudiante y hasta 3 reservas activas por semana calendario (`max_reservas_semana = 3`).
 3. **Control operativo de visitas y fidelización:** registro de asistencias reales con duración en minutos (sesión positiva de hasta 90 minutos / 1:30 horas, `DURACION_MAXIMA = 90`), fecha (opcional con valor por defecto de hoy), máquinas utilizadas, prevención estricta de visitas duplicadas en la misma franja y fecha (`VisitaDuplicadaError`), junto con un sistema de prioridad de membresía para usuarios habituales (≥3 visitas) o con mayor tiempo acumulado, respaldado por una ventana de caducidad automática de 2 horas.
 4. **Módulo de analítica deportiva con gráficos en tiempo real:** cálculo de horarios pico, programas académicos con mayor demanda, tiempo medio de permanencia por estudiante y ranking de desgaste de maquinaria deportiva, integrando gráficos interactivos con `matplotlib`.
-5. **Robustez mediante manejo formal de excepciones:** separación tajante entre la lógica de negocio y la interfaz gráfica (`tkinter`/`ttk`), asegurando que ningún error del usuario cierre la aplicación y que las validaciones no dependan de la vista mediante una jerarquía de 12 excepciones derivadas de `GymError`.
+5. **Robustez mediante manejo formal de excepciones:** separación tajante entre la lógica de negocio y la interfaz gráfica (`tkinter`/`ttk`), asegurando que ningún error del usuario cierre la aplicación y que las validaciones no dependan de la vista mediante una jerarquía de 13 excepciones derivadas de `GymError`.
 
 #### Destinatarios y roles de uso del software
-La aplicación de escritorio está concebida exclusivamente para el uso del personal administrativo del gimnasio de la Universidad de Medellín, concretamente:
-- **Encargado de las reservas:** usuario operativo que interactúa directamente en el mostrador/recepción para registrar y dar de baja a estudiantes, programar reservas de cupos, registrar asistencias efectivas (visitas) y máquinas empleadas, comprobar disponibilidad en tiempo real y gestionar las solicitudes de prioridad de membresía.
-- **Jefe de deportes:** usuario táctico y supervisor que analiza el comportamiento global del gimnasio mediante el panel de estadísticas y analítica deportiva (horarios pico, carreras con mayor afluencia, tiempo promedio de entrenamiento y ranking de maquinaria más utilizada) para la planificación de horarios, mantenimiento preventivo y adquisición de nuevos equipos deportivos.
+La aplicación de escritorio está concebida exclusivamente para el **Administrador o Encargado** del gimnasio de la Universidad de Medellín, quienes son los únicos que manejan el programa. Desde la aplicación registran y dan de baja a estudiantes, programan, cancelan y reactivan reservas de cupos, registran asistencias efectivas (visitas) y máquinas empleadas, comprueban la disponibilidad en tiempo real, gestionan las solicitudes de prioridad de membresía y consultan el panel de estadísticas y analítica deportiva (horarios pico, carreras con mayor afluencia, tiempo promedio de entrenamiento y ranking de maquinaria más utilizada). Los estudiantes no interactúan con el software.
 
 ---
 
@@ -60,10 +58,10 @@ El resultado de cada operación se clasifica formalmente en tres tipos:
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R1 |
-| **Actor** | Encargado de las reservas / Jefe de deportes |
-| **Resumen** | Registra un nuevo estudiante en el sistema, almacenando su nombre, número de documento y programa académico. Valida que el documento sea único y que ningún dato esté vacío. |
-| **Entradas** | `nombre` (texto no vacío), `documento` (texto no vacío), `programa` (texto no vacío). |
-| **Resultado** | **Tipo 1 (Modificación).** Se crea y persiste una nueva entidad `Usuario`. Si el documento ya existe, lanza `UsuarioYaRegistradoError`. Si algún campo llega en blanco, lanza `DatoVacioError`. |
+| **Actor** | Administrador / Encargado |
+| **Resumen** | Registra un nuevo estudiante en el sistema, almacenando su nombre, número de documento, programa académico y, de forma opcional, su correo electrónico (usado para notificar las reservas). Valida que el documento sea único, que los datos obligatorios no estén vacíos y que el correo, si se proporciona, tenga un formato válido. |
+| **Entradas** | `nombre` (texto no vacío), `documento` (texto no vacío), `programa` (texto no vacío), `correo` (texto opcional con formato `usuario@dominio.ext`, por defecto vacío). |
+| **Resultado** | **Tipo 1 (Modificación).** Se crea y persiste una nueva entidad `Usuario`. Si el documento ya existe, lanza `UsuarioYaRegistradoError`. Si algún campo obligatorio llega en blanco, lanza `DatoVacioError`. Si el correo no tiene formato válido, lanza `CorreoInvalidoError`. |
 | **Prototipo de interfaz** | Pantalla P1 (Usuarios). Formulario con campos de texto y botón «Registrar». Al confirmar, la tabla de usuarios se actualiza en pantalla. |
 
 Ejemplo de uso / salida en consola:
@@ -85,7 +83,7 @@ Salida: Usuario Mariana Restrepo registrado exitosamente.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R2 |
-| **Actor** | Encargado de las reservas / Jefe de deportes |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Da de baja el registro de un usuario verificando la coincidencia exacta de nombre y documento, eliminando de forma inmediata y consistente todas sus reservas, visitas históricas y prioridades asociadas en el sistema. |
 | **Entradas** | `nombre` (texto), `documento` (texto). |
 | **Resultado** | **Tipo 1 (Modificación).** Elimina el usuario del repositorio y ejecuta una purga en cascada sobre los repositorios de reservas, visitas y prioridades. Si no hay coincidencia, lanza `UsuarioNoRegistradoError`. |
@@ -109,10 +107,10 @@ Salida: El usuario identificado con 1004 se eliminó correctamente.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R3 |
-| **Actor** | Encargado de las reservas (a solicitud del estudiante) |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Aparta un cupo para un horario y fecha específicos, validando que el estudiante esté registrado, que el horario pertenezca a la franja operativa (08:00 AM a 08:00 PM), que la fecha sea válida en el calendario, que el aforo de 15 personas de la franja no esté lleno, que el usuario no tenga ya un cupo apartado con prioridad en esa franja, que el estudiante no tenga otra reserva activa ese día y que no supere el límite de 3 reservas activas en la misma semana calendario (`max_reservas_semana = 3`). |
 | **Entradas** | `documento` (texto), `horario_deseado` (texto en agenda), `fecha` (texto AAAA-MM-DD), `hora_actual` (datetime opcional). |
-| **Resultado** | **Tipo 1 (Modificación).** Registra una entidad `Reserva` en estado activa. Si viola alguna regla, lanza la excepción correspondiente (`UsuarioNoRegistradoError`, `FechaInvalidaError`, `HorarioInvalidoError`, `CupoLlenoError`, `ReservaDuplicadaError` por doble reserva el mismo día, cupo apartado con prioridad o superar las 3 reservas activas semanales). |
+| **Resultado** | **Tipo 1 (Modificación).** Registra una entidad `Reserva` en estado activa. Si viola alguna regla, lanza la excepción correspondiente (`UsuarioNoRegistradoError`, `FechaInvalidaError`, `HorarioInvalidoError`, `CupoLlenoError`, `ReservaDuplicadaError` por doble reserva el mismo día, cupo apartado con prioridad o superar las 3 reservas activas semanales). Si el usuario tiene correo registrado, se envía la confirmación por correo electrónico en un hilo secundario; si no hay credenciales configuradas, la notificación se omite sin interrumpir la reserva. |
 | **Prototipo de interfaz** | Pantalla P2 (Reservas). Formulario con selector de fecha `DateEntry`, lista desplegable de horarios de 08:00 AM a 08:00 PM y botón «Reservar». |
 
 Ejemplo de uso / salida en consola:
@@ -132,7 +130,7 @@ Salida: ¡Reserva exitosa! Mariana Restrepo tiene su espacio a las 08:00 AM. El 
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R4 |
-| **Actor** | Encargado de las reservas (control de acceso) |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Registra el acceso real de un estudiante a las instalaciones, guardando el horario de ingreso, la duración en minutos de la sesión (entero positivo de máximo 90 minutos / 1:30 horas, `DURACION_MAXIMA = 90`), la fecha de visita (opcional, por defecto toma la fecha actual del sistema) y las máquinas o equipos utilizados. Previene que el mismo usuario registre dos visitas en la misma fecha y franja horaria. Contabiliza el acceso en el aforo de 15 usuarios de la franja. |
 | **Entradas** | `documento` (texto), `horario` (texto disponible), `duracion` (entero positivo > 0 y <= 90), `equipos` (lista de cadenas de texto), `fecha` (texto AAAA-MM-DD opcional), `hora_actual` (datetime opcional). |
 | **Resultado** | **Tipo 1 (Modificación).** Almacena una entidad `Visita`. Valida usuario registrado (`UsuarioNoRegistradoError`), horario disponible (`HorarioInvalidoError`), duración entera positiva de máximo 90 minutos excluyendo booleanos (`DuracionInvalidaError`), fecha gregoriana válida (`FechaInvalidaError`), visita no duplicada (`VisitaDuplicadaError`) y cupo disponible en la franja (`CupoLlenoError`). |
@@ -155,7 +153,7 @@ Salida: Visita de Mariana Restrepo registrada correctamente.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R5 |
-| **Actor** | Jefe de deportes / Encargado de las reservas |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Analiza el historial acumulado de visitas y determina la franja horaria que registra la mayor cantidad de asistencias efectivas. |
 | **Entradas** | Ninguna (consulta sobre las visitas registradas). |
 | **Resultado** | **Tipo 2 (Cálculo).** Cadena con el horario pico. Si no hay visitas registradas, retorna *«No hay visitas registradas.»*. |
@@ -175,7 +173,7 @@ Salida: El horario más frecuente es 08:00 AM.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R6 |
-| **Actor** | Jefe de deportes |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Identifica la carrera universitaria con el mayor número de estudiantes inscritos en el gimnasio. |
 | **Entradas** | Ninguna (consulta sobre la colección de usuarios). |
 | **Resultado** | **Tipo 2 (Cálculo).** Cadena con el nombre del programa académico con mayor representatividad. Si no hay usuarios, informa que no hay registros. |
@@ -195,7 +193,7 @@ Salida: La carrera más frecuente es Administración de Empresas.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R7 |
-| **Actor** | Encargado de las reservas (a solicitud del estudiante) |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Cambia el estado de una reserva activa a cancelada, liberando de forma inmediata un cupo dentro del aforo de 15 usuarios de la franja. Si ya estaba cancelada, notifica al usuario sin provocar errores. |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto). |
 | **Resultado** | **Tipo 1 (Modificación).** La reserva pasa a `activa = False`. Si no existe ninguna reserva con esos parámetros, lanza `ReservaNoEncontradaError`. |
@@ -218,10 +216,10 @@ Salida: Reserva de Mariana Restrepo a las 08:00 AM cancelada.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R8 |
-| **Actor** | Encargado de las reservas (a solicitud del estudiante) |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Reactiva una reserva previamente cancelada, validando que la franja horaria no haya alcanzado el aforo máximo de 15 usuarios, que el usuario no tenga ya prioridad en la franja, que no genere conflicto de dos reservas activas el mismo día y que no supere el límite de 3 reservas activas en la misma semana calendario (`max_reservas_semana = 3`). |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto), `hora_actual` (opcional). |
-| **Resultado** | **Tipo 1 (Modificación).** La reserva pasa a `activa = True`. Lanza `CupoLlenoError` si la franja completó los 15 usuarios o `ReservaDuplicadaError` si ya cuenta con otra reserva activa ese día, prioridad en la franja o alcanzó el límite de 3 reservas activas semanales. |
+| **Resultado** | **Tipo 1 (Modificación).** La reserva pasa a `activa = True`. Lanza `CupoLlenoError` si la franja completó los 15 usuarios o `ReservaDuplicadaError` si ya cuenta con otra reserva activa ese día, prioridad en la franja o alcanzó el límite de 3 reservas activas semanales. Si el usuario tiene correo registrado, se envía la confirmación de la reserva reactivada por correo electrónico en un hilo secundario; si no hay credenciales configuradas, la notificación se omite sin interrumpir la reserva. |
 | **Prototipo de interfaz** | Pantalla P2 (Reservas). Botón «Confirmar». |
 
 Ejemplo de uso / salida en consola:
@@ -241,7 +239,7 @@ Salida: Reserva de Mariana Restrepo confirmada nuevamente para las 08:00 AM.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R9 |
-| **Actor** | Encargado de las reservas / Jefe de deportes |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Consulta rápidamente si un número de documento posee alguna reserva registrada (activa o histórica) en el gimnasio. |
 | **Entradas** | `documento` (texto). |
 | **Resultado** | **Tipo 2 (Cálculo).** Devuelve la cadena *«Sí»* si existe al menos una reserva coincidente, o *«No»* en caso contrario. |
@@ -264,7 +262,7 @@ Salida: ¿La reserva pertenece al usuario?: Sí.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R10 |
-| **Actor** | Encargado de las reservas / Jefe de deportes |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Genera una descripción legible y resumida de la reserva más relevante del estudiante (nombre, documento, fecha, horario y estado activa/cancelada). |
 | **Entradas** | `documento` (texto). |
 | **Resultado** | **Tipo 2 (Cálculo).** Cadena formateada descriptiva. Si el usuario no posee reservas, lanza `ReservaNoEncontradaError`. |
@@ -287,7 +285,7 @@ Salida: Reserva (activa) — Mariana Restrepo (1004), 2026-11-10, 08:00 AM.
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R11 |
-| **Actor** | Jefe de deportes / Encargado de las reservas |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Calcula la media aritmética de tiempo en minutos por usuario a partir de sus visitas registradas, con precisión de un decimal, y genera las estructuras numéricas para el gráfico de barras. |
 | **Entradas** | Ninguna (consulta sobre la colección de visitas). |
 | **Resultado** | **Tipo 2 (Cálculo).** Texto consolidado con el promedio de cada usuario y lista de tuplas `(nombre_usuario, promedio_minutos)` ordenada descendentemente. |
@@ -311,7 +309,7 @@ Promedio de duración por usuario:
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R12 |
-| **Actor** | Encargado de las reservas (a solicitud del estudiante habitual) |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Permite apartar un cupo con exclusividad temporal en un horario y fecha determinados si el usuario es «habitual» (acumula ≥3 visitas registradas a esa misma hora) o si registra estrictamente mayor tiempo total de entrenamiento que cualquier otro usuario (sin empates). La prioridad reserva 1 de los 15 cupos disponibles de la franja. Otros estudiantes pueden seguir reservando los cupos restantes mientras haya disponibilidad. |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto AAAA-MM-DD), `hora_actual` (datetime inyectable). |
 | **Resultado** | **Tipo 1 (Modificación).** Crea un cupo garantizado en la entidad `Prioridad`. Si faltan menos de 2 horas para la sesión o no cumple los criterios de fidelidad, lanza `PrioridadNoCumpleError`. Si ya tiene reserva activa en la franja, lanza `ReservaDuplicadaError`. Si la franja ya alcanzó los 15 usuarios, lanza `CupoLlenoError`. |
@@ -334,7 +332,7 @@ Salida: Mariana Restrepo obtuvo prioridad para el horario 08:00 AM del 2026-11-2
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R13 |
-| **Actor** | Encargado de las reservas (a solicitud del estudiante) |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Ratifica la asistencia al cupo apartado. Si la confirmación ocurre con 2 o más horas de antelación respecto al horario, el cupo queda garantizado; si se intenta confirmar con menos de 2 horas (o vencido el límite), la prioridad caduca, se purga del sistema y el cupo se libera automáticamente. |
 | **Entradas** | `documento` (texto), `horario` (texto), `fecha` (texto), `hora_actual` (datetime inyectable). |
 | **Resultado** | **Tipo 3 (Mezcla).** Si `hora_actual <= limite`: confirma el cupo (`confirmada = True`). Si `hora_actual > limite`: elimina la prioridad y libera el cupo. Si la prioridad no existe, lanza `PrioridadNoEncontradaError`. |
@@ -357,7 +355,7 @@ Salida: Mariana Restrepo confirmó su asistencia. El cupo de las 08:00 AM del 20
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R14 |
-| **Actor** | Encargado de las reservas / Jefe de deportes |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Consulta en tiempo real el aforo de todas las franjas horarias de la jornada (08:00 AM a 08:00 PM) para una fecha específica, reportando si cada franja está `LIBRE` (0/15 usuarios), `PARCIAL` (1 a 14 usuarios, indicando cupos libres) o `LLENO` (15/15 usuarios). Asimismo, permite consultar en detalle los ocupantes de cada franja (`ocupantes_franja`), desglosando nombre, documento y tipo de participación (Reserva, Visita, Prioridad) sin duplicar al estudiante multirrol. |
 | **Entradas** | `fecha` (texto AAAA-MM-DD), `hora_actual` (opcional). |
 | **Resultado** | **Tipo 2 (Cálculo).** Lista de tuplas `(horario, estado, detalle)`. Método complementario `ocupantes_franja(fecha, horario)` que retorna `list[tuple[nombre, documento, participaciones]]`. |
@@ -387,7 +385,7 @@ Ejemplo de uso / salida en consola:
 | Campo | Detalle |
 |---|---|
 | **Identificador** | R15 |
-| **Actor** | Jefe de deportes / Encargado de las reservas |
+| **Actor** | Administrador / Encargado |
 | **Resumen** | Cuantifica la frecuencia de uso de cada máquina o equipo deportivo a partir de los registros de visitas (contando máximo una vez por visita y normalizando mayúsculas/minúsculas) y genera el ranking analítico de utilización. |
 | **Entradas** | Ninguna (consulta sobre las visitas registradas). |
 | **Resultado** | **Tipo 2 (Cálculo).** Identifica el equipo con mayor demanda acumulada y devuelve la lista de tuplas `(equipo, número_de_usos)` ordenada descendentemente (`ranking_equipos()`). |
@@ -442,6 +440,7 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 5. **Comportamiento inicial de interfaz:** la aplicación arranca sin datos simulados o mock precargados en pantalla por defecto; las tablas se muestran limpias y se alimentan de forma reactiva a medida que el usuario efectúa registros.
 6. **Robustez ante errores:** cualquier dato inválido, choque de reserva o superación del aforo lanza una excepción de dominio que es interceptada por la interfaz gráfica, mostrando un cuadro de diálogo informativo (`messagebox.showerror`) sin abortar el proceso.
 7. **Librerías externas declaradas y degradación elegante:** se hace uso de `matplotlib` para la generación de gráficos estadísticos y `tkcalendar` para la selección interactiva de fechas. Ambas cuentan con mecanismos de fallback para no romper la ejecución si no estuvieran instaladas.
+8. **Notificaciones por correo electrónico (opcional):** el módulo `notificador.py` envía la confirmación de reserva mediante el servidor SMTP de Gmail (`smtp.gmail.com:587`, STARTTLS) en un hilo secundario (`threading.Thread`) para no bloquear la interfaz. Las credenciales se leen de las variables de entorno `GYM_EMAIL_REMITENTE` y `GYM_EMAIL_PASSWORD` (contraseña de aplicación de Gmail); si no están definidas o el usuario no tiene correo, el envío se omite sin lanzar excepciones.
 
 ---
 
@@ -457,8 +456,9 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 
 #### Actores del sistema
 
-- **Encargado de las reservas:** Usuario operativo primario del software en la recepción del gimnasio. Gestiona el registro y baja de usuarios, atiende y formaliza las solicitudes de reserva, registra los accesos físicos (visitas) con sus tiempos de permanencia y máquinas usadas, tramita prioridades de membresía y consulta la disponibilidad en tiempo real.
-- **Jefe de deportes:** Usuario táctico y supervisor general. Audita el aforo y la agenda de franjas horarias, analiza los reportes consolidados y monitorea los paneles analíticos interactivos (horarios pico, carreras más representativas, permanencia promedio y ranking de desgaste de maquinaria deportiva) para la toma de decisiones estratégicas de mantenimiento, presupuesto y logística.
+- **Administrador / Encargado:** único actor del sistema y usuario exclusivo del software. Gestiona el registro y baja de usuarios, atiende y formaliza las solicitudes de reserva, registra los accesos físicos (visitas) con sus tiempos de permanencia y máquinas usadas, tramita prioridades de membresía, consulta la disponibilidad en tiempo real y analiza los paneles estadísticos para la toma de decisiones sobre mantenimiento, presupuesto y logística.
+
+> El estudiante es una entidad del dominio (`Usuario`), no un actor: sus datos y solicitudes son gestionados por el Administrador / Encargado.
 
 #### Tabla de atributos, tipos y valores permitidos
 
@@ -467,6 +467,7 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 | **Usuario** | `nombre` | `str` | Cadena de texto no vacía (aplica `strip`). |
 | **Usuario** | `documento` | `str` | Identificador único del estudiante en el gimnasio. |
 | **Usuario** | `programa` | `str` | Carrera o programa académico no vacío. |
+| **Usuario** | `correo` | `str` | Opcional (por defecto vacío); se normaliza a minúsculas y, si se indica, debe tener formato `usuario@dominio.ext` (`CorreoInvalidoError`). |
 | **Reserva** | `documento` | `str` | Debe corresponder a un usuario previamente registrado. |
 | **Reserva** | `nombre_usuario` | `str` | Nombre del titular al momento de reservar. |
 | **Reserva** | `horario` | `str` | Franja horaria válida dentro del catálogo operativo. |
@@ -525,14 +526,14 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 
 | Requisito | Clase / método | Subtareas y lógica técnica |
 |---|---|---|
-| **R1** | `GymService.registrar_usuario` | Verifica no existencia del documento; instancia `Usuario` (valida textos no vacíos y aplica `strip`); persiste en `UsuarioRepositorio.agregar`. |
+| **R1** | `GymService.registrar_usuario` | Verifica no existencia del documento; instancia `Usuario` (valida textos no vacíos, aplica `strip` y valida el formato del correo opcional con `correo_valido`); persiste en `UsuarioRepositorio.agregar`. |
 | **R2** | `GymService.eliminar_usuario` | Valida coincidencia de nombre y documento; llama a `eliminar_por_documento` en repositorios de reservas, visitas y prioridades; elimina de usuarios. |
-| **R3** | `GymService.realizar_reserva` | Valida usuario; valida fecha y bisiestos; purga prioridades vencidas; valida horario oficial; valida que el usuario no tenga ya prioridad en la franja; valida ausencia de reserva activa en esa fecha; valida no superar el límite de 3 reservas activas por semana (`_exigir_limite_semanal`); valida que el aforo no supere los 15 usuarios (`_exigir_cupo`); crea y almacena `Reserva`. |
+| **R3** | `GymService.realizar_reserva` | Valida usuario; valida fecha y bisiestos; purga prioridades vencidas; valida horario oficial; valida que el usuario no tenga ya prioridad en la franja; valida ausencia de reserva activa en esa fecha; valida no superar el límite de 3 reservas activas por semana (`_exigir_limite_semanal`); valida que el aforo no supere los 15 usuarios (`_exigir_cupo`); crea y almacena `Reserva`. Si el usuario tiene correo, notifica la reserva con `notificador.enviar_confirmacion_reserva`. |
 | **R4** | `GymService.registrar_visita` | Valida usuario; valida horario y fecha (opcional, hoy por defecto); valida que no exista visita duplicada en misma franja y fecha (`VisitaDuplicadaError`); purga prioridades vencidas; valida aforo de 15 usuarios; instancia `Visita` (valida 0 < duración <= 90 minutos y limpia lista de máquinas); almacena en `VisitaRepositorio.agregar`. |
 | **R5** | `GymService.horario_mas_frecuente` | Itera sobre visitas, totaliza frecuencia por franja horaria y retorna la moda estadística. |
 | **R6** | `GymService.programa_mas_frecuente` | Itera sobre usuarios, totaliza por programa académico y determina la carrera con mayor cantidad de inscritos. |
 | **R7** | `GymService.cancelar_reserva` | Localiza la reserva por documento, horario y fecha (priorizando la activa); invoca `Reserva.cancelar()`, liberando un cupo para la franja. |
-| **R8** | `GymService.confirmar_reserva` | Localiza la reserva cancelada; purga prioridades vencidas; verifica que el usuario no tenga prioridad en la franja ni otra reserva activa en la fecha; valida límite semanal de 3 reservas (`_exigir_limite_semanal`); valida que la franja no esté llena (máximo 15); invoca `Reserva.confirmar()`. |
+| **R8** | `GymService.confirmar_reserva` | Localiza la reserva cancelada; purga prioridades vencidas; verifica que el usuario no tenga prioridad en la franja ni otra reserva activa en la fecha; valida límite semanal de 3 reservas (`_exigir_limite_semanal`); valida que la franja no esté llena (máximo 15); invoca `Reserva.confirmar()`. Si el usuario tiene correo, notifica la reactivación con `notificador.enviar_confirmacion_reserva`. |
 | **R9** | `GymService.verificar_propietario_reserva` | Examina la colección de reservas y retorna «Sí» si existe coincidencia de titularidad, o «No». |
 | **R10** | `GymService.mostrar_resumen_reserva` | Obtiene las reservas del documento; selecciona la más reciente/activa e invoca `Reserva.mostrar_resumen()`. Si no hay reservas, lanza excepción. |
 | **R11** | `GymService.promedio_duracion_por_usuario` / `datos_promedio_duracion` | Agrupa minutos y cantidad de asistencias por documento; calcula media con un decimal; estructura tuplas para interfaz y gráficos de `matplotlib`. |
@@ -545,7 +546,7 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 
 <https://drive.google.com/file/d/1tMd6Ef2lAoQ-iMlc_5vf92QXSMDi7o2w/view?usp=sharing>
 
-*(Diagrama de clases UML con `VentanaPrincipal`, los cinco paneles — `PanelUsuarios`, `PanelReservas`, `PanelVisitas`, `PanelPrioridades`, `PanelEstadisticas` —, `GymService`, `GymError` y su jerarquía de 12 excepciones, las interfaces de repositorio y las entidades `Usuario`, `Reserva`, `Visita` y `Prioridad`.)*
+*(Diagrama de clases UML con `VentanaPrincipal`, los cinco paneles — `PanelUsuarios`, `PanelReservas`, `PanelVisitas`, `PanelPrioridades`, `PanelEstadisticas` —, `GymService`, `GymError` y su jerarquía de 13 excepciones, las interfaces de repositorio y las entidades `Usuario`, `Reserva`, `Visita` y `Prioridad`.)*
 
 ### 3.3 Organización modular del código
 
@@ -553,11 +554,12 @@ La interfaz gráfica desarrollada en `tkinter`/`ttk` se organiza a través de un
 gym_universitario/
 │
 ├── main.py                      # Punto de entrada, inyección de dependencias y CLI (--demo, --consola)
-├── excepciones.py               # Jerarquía de 12 errores de dominio derivados de GymError
+├── excepciones.py               # Jerarquía de 13 errores de dominio derivados de GymError
 ├── modelos.py                   # Dataclasses (Usuario, Reserva, Visita, Prioridad) y fechas
 ├── repositorios.py              # Interfaces abstractas (ABC) e implementaciones en memoria
 ├── servicios.py                 # GymService: Orquestador de reglas de negocio R1 a R15 y aforo
-├── test_gym.py                  # Suite completa de 55 pruebas unitarias automatizadas con unittest
+├── notificador.py               # Notificaciones por correo (SMTP Gmail, hilo secundario, variables de entorno)
+├── test_gym.py                  # Suite completa de 58 pruebas unitarias automatizadas con unittest
 ├── requirements.txt             # Dependencias externas (matplotlib, tkcalendar)
 ├── README.md                    # Resumen del proyecto e instrucciones de ejecución
 ├── responsabilidades.md         # Matriz de trabajo, historias de usuario y plan de verificación
@@ -582,6 +584,7 @@ gym_universitario/
 | Documento ya registrado en el sistema (R1) | `UsuarioYaRegistradoError` | `messagebox.showerror("Error de negocio", mensaje)` |
 | Documento inexistente o nombre que no coincide (R2, R3, R4, R12) | `UsuarioNoRegistradoError` | Notificación en diálogo emergente sin cerrar la ventana |
 | Campo obligatorio vacío o solo espacios en blanco | `DatoVacioError` | Notificación al usuario indicando el campo faltante |
+| Correo con formato inválido (R1) | `CorreoInvalidoError` | Alerta con el formato esperado, por ejemplo `estudiante@udem.edu.co` |
 | Duración menor o igual a 0, no numérica o mayor a 90 minutos (R4) | `DuracionInvalidaError` | Alerta indicando que la duración debe ser entera positiva y máximo 90 minutos (1:30 horas) |
 | Horario fuera de la franja oficial (R3, R4, R12) | `HorarioInvalidoError` | Muestra lista de horarios disponibles permitidos |
 | Fecha inexistente o año no bisiesto (R3, R4, R12, R14) | `FechaInvalidaError` | Notificación de formato estricto AAAA-MM-DD |
@@ -622,9 +625,9 @@ En cumplimiento con las directrices de la entrega:
 
 ## 5. Plan y Evidencia de Verificación
 
-### 5.1 Suite completa de 55 pruebas unitarias automatizadas
+### 5.1 Suite completa de 58 pruebas unitarias automatizadas
 
-Se diseñó e implementó en `test_gym.py` un conjunto exhaustivo de **55 pruebas unitarias** con `unittest`, cubriendo todas las reglas de negocio, aforo, excepciones y casos de borde:
+Se diseñó e implementó en `test_gym.py` un conjunto exhaustivo de **58 pruebas unitarias** con `unittest`, cubriendo todas las reglas de negocio, aforo, excepciones y casos de borde:
 
 ```text
 test_cancelar_libera_un_cupo (test_gym.TestCapacidadPorFranja.test_cancelar_libera_un_cupo) ... ok
@@ -670,6 +673,9 @@ test_reserva_fecha_invalida (test_gym.TestReservas.test_reserva_fecha_invalida) 
 test_reserva_horario_invalido (test_gym.TestReservas.test_reserva_horario_invalido) ... ok
 test_reserva_usuario_no_registrado (test_gym.TestReservas.test_reserva_usuario_no_registrado) ... ok
 test_campos_vacios_lanzan_error (test_gym.TestUsuarios.test_campos_vacios_lanzan_error) ... ok
+test_correo_invalido_lanza_error (test_gym.TestUsuarios.test_correo_invalido_lanza_error) ... ok
+test_correo_omitido_es_opcional (test_gym.TestUsuarios.test_correo_omitido_es_opcional) ... ok
+test_correo_valido_se_almacena (test_gym.TestUsuarios.test_correo_valido_se_almacena) ... ok
 test_documento_con_espacios_es_limpiado (test_gym.TestUsuarios.test_documento_con_espacios_es_limpiado) ... ok
 test_documento_duplicado_lanza_error (test_gym.TestUsuarios.test_documento_duplicado_lanza_error) ... ok
 test_eliminar_con_nombre_incorrecto (test_gym.TestUsuarios.test_eliminar_con_nombre_incorrecto) ... ok
@@ -684,7 +690,7 @@ test_registrar_visita_usuario_no_registrado (test_gym.TestVisitasYFechas.test_re
 test_validador_fechas (test_gym.TestVisitasYFechas.test_validador_fechas) ... ok
 
 ----------------------------------------------------------------------
-Ran 55 tests in 0.180s
+Ran 58 tests in 0.067s
 
 OK
 ```
@@ -701,6 +707,6 @@ python main.py --demo
 # Ejecutar el flujo de verificación de punta a punta en consola (R1 a R15 + Pruebas de Aforo)
 python main.py --consola
 
-# Ejecutar la suite completa de 55 pruebas unitarias
+# Ejecutar la suite completa de 58 pruebas unitarias
 python -m unittest test_gym.py -v
 ```

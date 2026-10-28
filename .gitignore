@@ -153,6 +153,7 @@ activemq-data/
 .venv
 usuarios.json
 usuarios.json.*.tmp
+.idea/workspace.xml
 env/
 venv/
 ENV/

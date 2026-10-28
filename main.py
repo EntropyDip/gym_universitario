@@ -7,9 +7,11 @@ Uso:
 """
 import argparse
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from excepciones import GymError
 from repositorios import (
+    ContactoUsuarioRepositorioJSON,
     PrioridadRepositorioMemoria,
     ReservaRepositorioMemoria,
     UsuarioRepositorioMemoria,
@@ -17,13 +19,27 @@ from repositorios import (
 )
 from servicios import GymService
 
-def crear_servicio() -> GymService:
-    """Instancia los repositorios en memoria y el servicio principal con inyección de dependencias."""
+def crear_servicio(persistir_contactos: bool = True) -> GymService:
+    """Construye el servicio con almacenamiento JSON de contactos opcional.
+
+    Parámetros:
+        persistir_contactos: habilita usuarios.json para reservas de la interfaz.
+
+    Retorna:
+        Servicio de gimnasio listo para la interfaz o la demostración.
+
+    Excepciones:
+        No crea el archivo JSON hasta que se guarda un contacto.
+    """
     return GymService(
         usuarios=UsuarioRepositorioMemoria(),
         reservas=ReservaRepositorioMemoria(),
         visitas=VisitaRepositorioMemoria(),
-        prioridades=PrioridadRepositorioMemoria()
+        prioridades=PrioridadRepositorioMemoria(),
+        contactos=(
+            ContactoUsuarioRepositorioJSON(Path(__file__).with_name("usuarios.json"))
+            if persistir_contactos else None
+        ),
     )
 
 
@@ -175,7 +191,7 @@ def main() -> None:
     lector.add_argument("--consola", action="store_true", help="Ejecuta el flujo completo por consola")
     argumentos = lector.parse_args()
 
-    gym = crear_servicio()
+    gym = crear_servicio(persistir_contactos=not (argumentos.consola or argumentos.demo))
     if argumentos.consola:
         flujo_consola(gym)
         return

@@ -18,8 +18,9 @@ El proyecto sigue una estricta separación de responsabilidades en cuatro capas:
 gym_universitario/
 │
 ├── modelos.py           # Capa de Dominio: Entidades (Usuario, Reserva, Visita, Prioridad) y validación matemática de fechas
-├── repositorios.py      # Capa de Persistencia: Contratos abstractos (ABC) e implementaciones en memoria
+├── repositorios.py      # Capa de Persistencia: repositorios en memoria y contactos JSON
 ├── servicios.py         # Capa de Negocio: GymService (orquestador de los 15 requisitos funcionales)
+├── notificador.py       # Notificaciones por correo con fallback SMS/WhatsApp
 ├── excepciones.py       # Jerarquía formal de errores de dominio (heredan de GymError)
 ├── interfaz/            # Capa de Presentación: GUI desacoplada en Tkinter/ttk con gráficos embebidos
 │   ├── componentes.py       # Widgets reutilizables (PanelBase, TablaDatos, SelectorFecha, SelectorHorario)
@@ -32,11 +33,38 @@ gym_universitario/
 │   └── panel_estadisticas.py# Pantalla P5: Métricas y Gráficos Matplotlib (R5, R6, R11, R15)
 │
 ├── main.py              # Punto de entrada, inyección de dependencias y CLI (--demo, --consola)
-├── test_gym.py          # Suite completa de 55 pruebas unitarias automatizadas con unittest
+├── usuarios.json        # Contactos de usuarios (generado en ejecución y excluido de Git)
+├── test_gym.py          # Pruebas unitarias de las reglas de negocio
+├── test_contactos_notificaciones.py # Pruebas de persistencia JSON y notificaciones
 ├── requirements.txt     # Librerías externas (matplotlib, tkcalendar)
 ├── responsabilidades.md # Plan de trabajo, historias de usuario y matriz de distribución
 └── GYM_UNIVERSITARIO (1).md # Informe técnico maestro de análisis y diseño integral
 ```
+
+---
+
+## Persistencia de contactos y notificaciones
+
+La aplicación de escritorio crea `usuarios.json` en la carpeta del proyecto.
+El archivo contiene únicamente una lista de objetos con `identificador` (el
+documento del usuario), `correo` y `celular`; no almacena contraseñas ni datos
+académicos. Las escrituras reemplazan el JSON de forma atómica y los errores de
+lectura, formato o escritura se muestran como errores de persistencia. El archivo
+está excluido de Git para proteger los datos personales.
+
+Al reservar, el servicio consulta primero el repositorio JSON. Si el identificador
+ya tiene contacto, utiliza automáticamente el correo y celular guardados; si no,
+la interfaz solicita ambos valores y los guarda tras validar la reserva. El
+correo es el canal principal. Si el proveedor de correo devuelve fallo o lanza
+una excepción, `NotificadorReservas` intenta SMS/WhatsApp con el celular. Hasta
+conectar proveedores reales, ambos canales registran una entrega simulada en
+consola. Las funciones de integración están señaladas con comentarios `TODO` en
+`notificador.py`; allí deben inyectarse tokens/credenciales de API, nunca datos
+secretos de los usuarios.
+
+La pestaña de usuarios también permite guardar ambos datos de contacto al
+registrar el usuario. Al eliminar un usuario se elimina su contacto del JSON.
+Las ejecuciones `--demo` y `--consola` no leen ni escriben contactos persistentes.
 
 ---
 
@@ -159,13 +187,13 @@ python main.py --consola
 
 ## Pruebas Unitarias Automatizadas
 
-El sistema cuenta con una batería de **55 pruebas unitarias automatizadas** implementadas con la biblioteca estándar `unittest`:
+El sistema cuenta con una batería de **65 pruebas unitarias automatizadas** implementadas con la biblioteca estándar `unittest`:
 
 ```bash
-python -m unittest test_gym.py -v
+python -m unittest test_gym.py test_contactos_notificaciones.py -v
 ```
 
-### Cobertura de las 55 Pruebas:
+### Cobertura por módulos:
 - **`TestCapacidadPorFranja` (14 pruebas)**: Límite de aforo de 15 usuarios por franja, reserva número 16 rechazada con `CupoLlenoError`, liberación de cupos al cancelar, reactivación en franja llena, visitas como ocupantes, cómputo único por estudiante multirrol, visitante 16 rechazado, prevención de visitas duplicadas con `VisitaDuplicadaError`, visitas en diferentes franjas o fechas, visitas con fecha hoy por defecto, prioridad como cupo ocupado y desestimación de prioridad innecesaria para quien ya tiene reserva activa.
 - **`TestPrioridades` (11 pruebas)**: Prioridad por usuario habitual (≥3 visitas), rechazo por incumplimiento de requisitos, reserva concurrente de franja con prioridad ajena, confirmación a tiempo, liberación automática por confirmación tardía, búsqueda inexistente, rechazo con menos de 2 horas de antelación, prioridad por mayor tiempo acumulado, bloqueo de reserva redundante al titular de la prioridad, reflejo de prioridad en disponibilidad y validación de datos vacíos.
 - **`TestReservas` (7 pruebas)**: Reserva exitosa, rechazo por usuario no registrado, franja inválida, fecha inválida o año no bisiesto, doble reserva activa en el mismo día, ciclo completo de cancelación/reactivación y cancelación de reserva inexistente.
@@ -174,6 +202,7 @@ python -m unittest test_gym.py -v
 - **`TestEstadisticas` (4 pruebas)**: Horario pico más frecuente, carrera académica más frecuente, promedio de duración en minutos por estudiante y comportamiento con repositorios vacíos.
 - **`TestConsultasYDisponibilidad` (3 pruebas)**: Verificación de titularidad de reserva (Sí/No), resumen textual de reserva y consulta de estados de disponibilidad.
 - **`TestEspaciosEnFechasYPrioridadesVigentes` (3 pruebas)**: Cancelación con espacios accidentales en la fecha, solicitud de prioridad con espacios y purga reactiva de prioridades vencidas.
+- **`TestContactosJSON` y `TestNotificadorReservas` (7 pruebas)**: Persistencia exclusiva de los campos autorizados, recuperación automática del contacto, errores de lectura/escritura, eliminación del contacto y fallback correo/SMS.
 
 ---
 

@@ -1,7 +1,12 @@
 """Repositorios: interfaces abstractas e implementaciones en memoria."""
 from abc import ABC, abstractmethod
+import json
+import os
+from pathlib import Path
+import tempfile
 
-from modelos import Prioridad, Reserva, Usuario, Visita
+from excepciones import CorreoInvalidoError, DatoVacioError, PersistenciaError
+from modelos import ContactoUsuario, Prioridad, Reserva, Usuario, Visita
 
 # ------------------------------------------------------------------ Repositorio de Usuarios (Samuel)
 class UsuarioRepositorio(ABC):
@@ -41,6 +46,176 @@ class UsuarioRepositorioMemoria(UsuarioRepositorio):
 
     def eliminar_por_documento(self, documento: str) -> None:
         self._usuarios.pop(documento.strip(), None)
+
+
+class ContactoUsuarioRepositorioJSON:
+    """Almacena exclusivamente identificador, correo y celular en un archivo JSON.
+
+    El archivo se vuelve a leer en cada consulta para reflejar cambios externos.
+    Las escrituras reemplazan el archivo de forma atómica.
+    """
+
+    _CAMPOS = {"identificador", "correo", "celular"}
+
+    def __init__(self, ruta: str | Path = "usuarios.json") -> None:
+        """Inicializa el repositorio.
+
+        Parámetros:
+            ruta: ubicación del archivo JSON de contactos.
+
+        Retorna:
+            None.
+
+        Excepciones:
+            No accede al archivo durante la inicialización.
+        """
+        self.ruta = Path(ruta)
+
+    def buscar(self, identificador: str) -> ContactoUsuario | None:
+        """Busca un contacto por identificador.
+
+        Parámetros:
+            identificador: documento u otro identificador estable del usuario.
+
+        Retorna:
+            El contacto encontrado o None si no existe.
+
+        Excepciones:
+            PersistenciaError: si el archivo o sus registros no son válidos.
+        """
+        clave = str(identificador).strip()
+        return next(
+            (contacto for contacto in self.listar() if contacto.identificador == clave),
+            None,
+        )
+
+    def listar(self) -> list[ContactoUsuario]:
+        """Carga y valida todos los contactos guardados.
+
+        Parámetros:
+            Ninguno.
+
+        Retorna:
+            Contactos con los tres campos permitidos.
+
+        Excepciones:
+            PersistenciaError: ante errores de lectura, JSON corrupto o estructura inválida.
+        """
+        if not self.ruta.exists():
+            return []
+        try:
+            with self.ruta.open("r", encoding="utf-8") as archivo:
+                registros = json.load(archivo)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise PersistenciaError(
+                f"No se pudieron leer los contactos desde '{self.ruta}': {error}"
+            ) from error
+
+        if not isinstance(registros, list):
+            raise PersistenciaError("El archivo de contactos debe contener una lista JSON.")
+        contactos: list[ContactoUsuario] = []
+        for indice, registro in enumerate(registros):
+            if not isinstance(registro, dict) or set(registro) != self._CAMPOS:
+                raise PersistenciaError(
+                    f"El registro de contacto en la posición {indice} no tiene los campos permitidos."
+                )
+            try:
+                contactos.append(ContactoUsuario(**registro))
+            except (CorreoInvalidoError, DatoVacioError, TypeError, ValueError) as error:
+                raise PersistenciaError(
+                    f"El registro de contacto en la posición {indice} no es válido: {error}"
+                ) from error
+        return contactos
+
+    def guardar(self, contacto: ContactoUsuario) -> None:
+        """Inserta o actualiza el contacto y persiste solo sus tres campos.
+
+        Parámetros:
+            contacto: datos de contacto ya validados.
+
+        Excepciones:
+            PersistenciaError: si no se puede escribir o reemplazar el archivo.
+
+        Retorna:
+            None.
+        """
+        contactos = {
+            existente.identificador: existente
+            for existente in self.listar()
+        }
+        contactos[contacto.identificador] = contacto
+        registros = [
+            {
+                "identificador": item.identificador,
+                "correo": item.correo,
+                "celular": item.celular,
+            }
+            for item in contactos.values()
+        ]
+        self._escribir(registros)
+
+    def eliminar(self, identificador: str) -> None:
+        """Elimina el contacto del identificador indicado, si existe.
+
+        Parámetros:
+            identificador: documento u otro identificador del usuario.
+
+        Excepciones:
+            PersistenciaError: si no se puede leer o escribir el archivo.
+
+        Retorna:
+            None.
+        """
+        clave = str(identificador).strip()
+        contactos = [item for item in self.listar() if item.identificador != clave]
+        self._escribir([
+            {
+                "identificador": item.identificador,
+                "correo": item.correo,
+                "celular": item.celular,
+            }
+            for item in contactos
+        ])
+
+    def _escribir(self, registros: list[dict[str, str]]) -> None:
+        """Reemplaza el archivo con JSON válido mediante un temporal en el mismo directorio.
+
+        Parámetros:
+            registros: lista de objetos que contienen exclusivamente los campos de contacto.
+
+        Excepciones:
+            PersistenciaError: si el directorio, temporal o reemplazo no son accesibles.
+
+        Retorna:
+            None.
+        """
+        temporal: str | None = None
+        try:
+            self.ruta.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.ruta.parent,
+                prefix=f".{self.ruta.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as archivo:
+                temporal = archivo.name
+                json.dump(registros, archivo, ensure_ascii=False, indent=2)
+                archivo.write("\n")
+            os.replace(temporal, self.ruta)
+        except (OSError, TypeError, ValueError) as error:
+            if temporal is not None:
+                try:
+                    Path(temporal).unlink()
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    pass
+            raise PersistenciaError(
+                f"No se pudieron guardar los contactos en '{self.ruta}': {error}"
+            ) from error
+
 
 # ------------------------------------------------------------------ Repositorio de Reservas (Samuel)
 class ReservaRepositorio(ABC):
@@ -190,5 +365,3 @@ class PrioridadRepositorioMemoria(PrioridadRepositorio):
     def eliminar_por_documento(self, documento: str) -> None:
         doc = documento.strip()
         self._prioridades = [p for p in self._prioridades if p.documento != doc]
-
-

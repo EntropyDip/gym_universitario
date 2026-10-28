@@ -5,7 +5,7 @@ from interfaz.componentes import PanelBase, TablaDatos
 
 
 class PanelUsuarios(PanelBase):
-    """Formulario para registrar y eliminar usuarios, con la tabla de usuarios."""
+    """Registra/elimina usuarios y sus datos de contacto, con una tabla."""
 
     def __init__(self, master, gym):
         super().__init__(master, gym)
@@ -20,16 +20,20 @@ class PanelUsuarios(PanelBase):
             self.campos[clave] = ttk.Entry(formulario, width=35)
             self.campos[clave].grid(row=fila, column=1, padx=5, pady=4)
 
-        # Campo correo electrónico (opcional) — para notificaciones de reserva
+        # Los datos de contacto son opcionales; si se capturan juntos se guardan en usuarios.json.
         ttk.Label(formulario, text="Correo electrónico").grid(
             row=3, column=0, padx=5, pady=4, sticky="w")
         self.campos["correo"] = ttk.Entry(formulario, width=35)
         self.campos["correo"].grid(row=3, column=1, padx=5, pady=4)
-        ttk.Label(formulario, text="(opcional — recibirá confirmación de reserva)",
+        ttk.Label(formulario, text="Celular").grid(
+            row=4, column=0, padx=5, pady=4, sticky="w")
+        self.campos["celular"] = ttk.Entry(formulario, width=35)
+        self.campos["celular"].grid(row=4, column=1, padx=5, pady=4)
+        ttk.Label(formulario, text="(ambos opcionales; requeridos al reservar si no están guardados)",
                   foreground="#666").grid(row=3, column=2, padx=5, sticky="w")
 
         botones = ttk.Frame(formulario)
-        botones.grid(row=4, column=0, columnspan=3, pady=6)
+        botones.grid(row=5, column=0, columnspan=3, pady=6)
         ttk.Button(botones, text="Registrar", command=self.registrar).pack(side="left", padx=5)
         ttk.Button(botones, text="Eliminar", command=self.eliminar).pack(side="left", padx=5)
 
@@ -37,10 +41,15 @@ class PanelUsuarios(PanelBase):
         self.tabla.pack(fill="both", expand=True, padx=10, pady=8)
         self.refrescar()
 
-    def _leer(self) -> tuple[str, str, str, str]:
-        """Lee los campos del formulario incluyendo el correo."""
+    def _leer(self) -> tuple[str, str, str, str, str]:
+        """Lee los campos del formulario de usuario y contacto.
+
+        Retorna:
+            Nombre, documento, programa, correo y celular en ese orden.
+        """
         return (self.campos["nombre"].get(), self.campos["documento"].get(),
-                self.campos["programa"].get(), self.campos["correo"].get())
+                self.campos["programa"].get(), self.campos["correo"].get(),
+                self.campos["celular"].get())
 
     def _limpiar(self) -> None:
         """Vacía los campos del formulario."""
@@ -48,17 +57,39 @@ class PanelUsuarios(PanelBase):
             campo.delete(0, "end")
 
     def registrar(self) -> None:
-        """Pide al servicio registrar el usuario y muestra el mensaje o el error."""
-        nombre, documento, programa, correo = self._leer()
-        mensaje = self.ejecutar(self.gym.registrar_usuario, nombre, documento, programa, correo)
+        """Registra el usuario y muestra el mensaje o el error.
+
+        Parámetros:
+            Ninguno; lee los valores del formulario.
+
+        Retorna:
+            None; limpia y actualiza la pantalla si el registro tuvo éxito.
+
+        Excepciones:
+            No propaga errores del servicio; PanelBase los presenta en la interfaz.
+        """
+        nombre, documento, programa, correo, celular = self._leer()
+        mensaje = self.ejecutar(
+            self.gym.registrar_usuario, nombre, documento, programa, correo, celular
+        )
         if mensaje:
             messagebox.showinfo("Usuarios", mensaje)
             self._limpiar()
             self.refrescar()
 
     def eliminar(self) -> None:
-        """Pide confirmación y pide al servicio eliminar al usuario (nombre y documento)."""
-        nombre, documento, _, _ = self._leer()
+        """Pide confirmación y elimina al usuario y sus datos asociados.
+
+        Parámetros:
+            Ninguno; lee nombre y documento del formulario.
+
+        Retorna:
+            None; limpia y actualiza la pantalla si se eliminó el usuario.
+
+        Excepciones:
+            No propaga errores del servicio; PanelBase los presenta en la interfaz.
+        """
+        nombre, documento, _, _, _ = self._leer()
         if not messagebox.askyesno(
                 "Confirmar", "¿Eliminar al usuario con todas sus reservas, visitas y prioridades?"):
             return

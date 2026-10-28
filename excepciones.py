@@ -60,3 +60,10 @@ class VisitaDuplicadaError(GymError):
 class CorreoInvalidoError(GymError):
     """El correo electrónico no tiene un formato válido."""
 
+
+class DatosContactoRequeridosError(GymError):
+    """La reserva necesita correo y celular que aún no están registrados."""
+
+
+class PersistenciaError(GymError):
+    """No se pudieron leer o guardar los datos persistidos."""

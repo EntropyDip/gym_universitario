@@ -71,6 +71,53 @@ class Usuario:
                 )
 
 
+@dataclass
+class ContactoUsuario:
+    """Datos mínimos de contacto persistidos para las confirmaciones de reserva.
+
+    Parámetros:
+        identificador: documento u otro identificador estable del usuario.
+        correo: dirección de correo electrónico de contacto.
+        celular: número de celular usado para el canal alternativo de notificación.
+
+    Excepciones:
+        DatoVacioError: si falta cualquiera de los tres valores.
+        CorreoInvalidoError: si el correo no tiene un formato reconocido.
+
+    Retorna:
+        None desde la inicialización de la entidad.
+    """
+    identificador: str
+    correo: str
+    celular: str
+
+    def __post_init__(self) -> None:
+        """Normaliza los valores y valida que el correo y el celular existan.
+
+        Parámetros:
+            Ninguno aparte de la entidad inicializada.
+
+        Retorna:
+            None.
+
+        Excepciones:
+            DatoVacioError: si falta el identificador, correo o celular.
+            CorreoInvalidoError: si el correo no tiene un formato reconocido.
+        """
+        self.identificador = str(self.identificador).strip()
+        self.correo = str(self.correo).strip().lower()
+        self.celular = str(self.celular).strip()
+        if not self.identificador:
+            raise DatoVacioError("El identificador de contacto no puede quedar vacío.")
+        if not self.correo:
+            raise DatoVacioError("El correo electrónico no puede quedar vacío.")
+        if not self.celular:
+            raise DatoVacioError("El número de celular no puede quedar vacío.")
+        from notificador import correo_valido
+        if not correo_valido(self.correo):
+            from excepciones import CorreoInvalidoError
+            raise CorreoInvalidoError(f"El correo '{self.correo}' no tiene un formato válido.")
+
 
 @dataclass
 class Reserva:
@@ -205,4 +252,3 @@ class Prioridad:
     def confirmar(self) -> None:
         """Marca la prioridad como confirmada."""
         self.confirmada = True
-

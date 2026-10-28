@@ -1,13 +1,14 @@
 """Pantalla P2: reservas y disponibilidad (R3, R7, R8, R9, R10, R14)."""
-from tkinter import messagebox, ttk
+from tkinter import messagebox, simpledialog, ttk
 
+from excepciones import GymError
 from interfaz.componentes import PanelBase, SelectorFecha, SelectorHorario, TablaDatos
 
 COLORES_ESTADO = {"libre": "#d9f2d9", "parcial": "#fff2cc", "lleno": "#f8d7da"}
 
 
 class PanelReservas(PanelBase):
-    """Reservar, cancelar y confirmar; consultar propietario, resumen y disponibilidad."""
+    """Gestiona reservas, solicita contacto nuevo y consulta disponibilidad."""
 
     def __init__(self, master, gym):
         super().__init__(master, gym)
@@ -64,8 +65,58 @@ class PanelReservas(PanelBase):
             self.consultar_disponibilidad()
 
     def reservar(self) -> None:
-        """R3: pide al servicio crear la reserva."""
-        self._accion(self.gym.realizar_reserva)
+        """Pide contacto solo si falta y crea la reserva.
+
+        Parámetros:
+            Ninguno; toma documento, horario y fecha del formulario.
+
+        Retorna:
+            None; actualiza las tablas tras una reserva exitosa.
+
+        Excepciones:
+            No propaga errores del servicio; PanelBase los presenta en la interfaz.
+        """
+        documento, horario, fecha = self._datos()
+        try:
+            contacto = self.gym.obtener_contacto_usuario(documento)
+        except GymError as error:
+            messagebox.showerror("Error de negocio", str(error))
+            return
+        except Exception as error:
+            messagebox.showerror("Error inesperado", f"{type(error).__name__}: {error}")
+            return
+        if contacto is None and self.gym.contactos is not None:
+            correo = simpledialog.askstring(
+                "Datos de contacto",
+                "Correo electrónico para confirmar la reserva:",
+                parent=self,
+            )
+            if correo is None:
+                return
+            celular = simpledialog.askstring(
+                "Datos de contacto",
+                "Número de celular para alertas SMS/WhatsApp:",
+                parent=self,
+            )
+            if celular is None:
+                return
+            mensaje = self.ejecutar(
+                self.gym.realizar_reserva,
+                documento,
+                horario,
+                fecha,
+                None,
+                correo,
+                celular,
+            )
+        else:
+            mensaje = self.ejecutar(
+                self.gym.realizar_reserva, documento, horario, fecha
+            )
+        if mensaje:
+            messagebox.showinfo("Reservas", mensaje)
+            self.refrescar()
+            self.consultar_disponibilidad()
 
     def cancelar(self) -> None:
         """R7: pide al servicio cancelar la reserva."""

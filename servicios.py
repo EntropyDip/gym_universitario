@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from excepciones import (
     CorreoInvalidoError,
     CupoLlenoError,
+    DatosContactoRequeridosError,
     FechaInvalidaError,
     HorarioInvalidoError,
     PrioridadNoCumpleError,
@@ -14,7 +15,8 @@ from excepciones import (
     UsuarioYaRegistradoError,
     VisitaDuplicadaError,
 )
-from modelos import Prioridad, Reserva, Usuario, Visita, es_fecha_valida
+from modelos import ContactoUsuario, Prioridad, Reserva, Usuario, Visita, es_fecha_valida
+from notificador import NotificadorReservas
 
 
 class GymService:
@@ -23,8 +25,27 @@ class GymService:
     def __init__(self, usuarios, reservas, visitas=None, prioridades=None,
                 nombre: str = "Gimnasio universitario",
                 duracion_maxima_sesion: str = "1:30 horas",
-                capacidad_maxima: int = 15) -> None:
-        """Inicializa el servicio inyectando los repositorios correspondientes."""
+                capacidad_maxima: int = 15, contactos=None,
+                notificador: NotificadorReservas | None = None) -> None:
+        """Inicializa el servicio y sus dependencias de persistencia y notificación.
+
+        Parámetros:
+            usuarios: repositorio de usuarios de dominio.
+            reservas: repositorio de reservas.
+            visitas: repositorio opcional de visitas.
+            prioridades: repositorio opcional de prioridades.
+            nombre: nombre mostrado para el gimnasio.
+            duracion_maxima_sesion: duración máxima mostrada en confirmaciones.
+            capacidad_maxima: aforo máximo por franja horaria.
+            contactos: repositorio opcional de contactos, habitualmente JSON.
+            notificador: notificador opcional; se crea uno predeterminado si se omite.
+
+        Retorna:
+            None.
+
+        Excepciones:
+            No valida ni accede a los repositorios durante la construcción.
+        """
         self.nombre = nombre
         self.horarios_disponibles: list[str] = [
             "08:00 AM", "10:00 AM", "12:00 PM", "02:00 PM", "04:00 PM", "06:00 PM", "08:00 PM"
@@ -38,28 +59,61 @@ class GymService:
         self.reservas = reservas
         self.visitas = visitas
         self.prioridades = prioridades
+        self.contactos = contactos
+        self.notificador = notificador or NotificadorReservas()
 
     def registrar_usuario(self, nombre: str, documento: str, programa: str,
-                          correo: str = "") -> str:
+                          correo: str = "", celular: str = "") -> str:
         """Registra un nuevo usuario validando que el documento sea único (R1).
 
-        El campo correo es opcional; si se provee se valida su formato y se
-        almacena para el envío de notificaciones de confirmación de reserva.
+        Parámetros:
+            nombre: nombre del usuario.
+            documento: identificador único.
+            programa: programa académico.
+            correo: correo opcional para la notificación de reserva.
+            celular: número de celular opcional para el respaldo SMS/WhatsApp.
+
+        Retorna:
+            Mensaje de éxito.
+
+        Excepciones:
+            UsuarioYaRegistradoError: si el documento ya está registrado.
+            CorreoInvalidoError: si se proporciona un correo inválido.
+            DatoVacioError: si faltan datos obligatorios del usuario o contacto.
+            PersistenciaError: si no se puede persistir el contacto.
         """
         usuario = Usuario(nombre, documento, programa, correo)
         if self.usuarios.buscar(usuario.documento) is not None:
             raise UsuarioYaRegistradoError(
                 f"El documento {usuario.documento} ya se encuentra registrado.")
+        if self.contactos is not None and (correo.strip() or celular.strip()):
+            contacto = ContactoUsuario(usuario.documento, correo, celular)
+            self.contactos.guardar(contacto)
         self.usuarios.agregar(usuario)
         return f"Usuario {usuario.nombre} registrado exitosamente."
 
     def eliminar_usuario(self, nombre: str, documento: str) -> str:
-        """Elimina un usuario y realiza la eliminación en cascada de sus datos asociados (R2)."""
+        """Elimina el usuario y sus reservas, visitas, prioridades y contacto (R2).
+
+        Parámetros:
+            nombre: nombre que debe coincidir con el registro.
+            documento: identificador único del usuario.
+
+        Retorna:
+            Mensaje de éxito.
+
+        Excepciones:
+            UsuarioNoRegistradoError: si el nombre/documento no coincide.
+            PersistenciaError: si no se puede eliminar el contacto JSON.
+        """
         nombre_limpio = str(nombre).strip()
         doc_limpio = str(documento).strip()
         usuario = self.usuarios.buscar(doc_limpio)
         if usuario is None or usuario.nombre != nombre_limpio:
             raise UsuarioNoRegistradoError("El usuario no está registrado.")
+
+        if self.contactos is not None:
+            self.contactos.eliminar(doc_limpio)
 
         # Eliminación en cascada en todos los repositorios asociados
         for repositorio in (self.reservas, self.visitas, self.prioridades):
@@ -69,17 +123,57 @@ class GymService:
         self.usuarios.eliminar_por_documento(doc_limpio)
         return f"El usuario identificado con {doc_limpio} se eliminó correctamente."
 
+    def obtener_contacto_usuario(self, identificador: str) -> ContactoUsuario | None:
+        """Busca en persistencia el contacto asociado al identificador.
+
+        Parámetros:
+            identificador: documento u otro identificador estable del usuario.
+
+        Retorna:
+            El correo y celular guardados, o None cuando aún no hay registro.
+
+        Excepciones:
+            PersistenciaError: si el archivo JSON no se puede leer o validar.
+        """
+        if self.contactos is None:
+            return None
+        return self.contactos.buscar(str(identificador).strip())
+
     def listar_usuarios(self) -> list[Usuario]:
         """Devuelve la lista de usuarios registrados."""
         return self.usuarios.listar()
 
     def realizar_reserva(self, documento: str, horario_deseado: str, fecha: str,
-                         hora_actual: datetime | None = None) -> str:
-        """Crea una reserva activa aplicando todas las validaciones de negocio (R3)."""
+                         hora_actual: datetime | None = None,
+                         correo: str | None = None,
+                         celular: str | None = None) -> str:
+        """Crea una reserva y notifica al usuario por correo o por el canal alternativo.
+
+        Si existe persistencia de contactos, la consulta se hace antes de reservar.
+        Cuando no existe el contacto, el llamador debe proporcionar correo y celular;
+        solo se guardan tras validar todas las reglas de reserva.
+
+        Parámetros:
+            documento: identificador del usuario ya registrado.
+            horario_deseado: franja solicitada.
+            fecha: fecha de la reserva en formato AAAA-MM-DD.
+            hora_actual: hora opcional para reglas temporales.
+            correo: correo requerido para registrar un contacto nuevo.
+            celular: celular requerido para registrar un contacto nuevo.
+
+        Retorna:
+            Mensaje con la confirmación de la reserva.
+
+        Excepciones:
+            UsuarioNoRegistradoError, FechaInvalidaError, HorarioInvalidoError,
+            ReservaDuplicadaError, CupoLlenoError, DatosContactoRequeridosError,
+            CorreoInvalidoError, DatoVacioError o PersistenciaError según corresponda.
+        """
         doc_limpio = str(documento).strip()
         horario_deseado = str(horario_deseado).strip()
         fecha = str(fecha).strip()
         usuario = self._exigir_usuario(doc_limpio)
+        contacto_guardado = self.obtener_contacto_usuario(doc_limpio)
         self._validar_fecha(fecha)
         ahora = hora_actual or datetime.now()
         self._liberar_prioridades_vencidas(ahora)
@@ -100,16 +194,26 @@ class GymService:
         # Validar que la franja no haya alcanzado el máximo de usuarios
         self._exigir_cupo(doc_limpio, horario_deseado, fecha)
 
+        contacto = contacto_guardado
+        if self.contactos is not None and contacto is None:
+            if not correo or not celular:
+                raise DatosContactoRequeridosError(
+                    "Para reservar por primera vez, ingresa correo electrónico y número de celular."
+                )
+            contacto = ContactoUsuario(doc_limpio, correo, celular)
+            self.contactos.guardar(contacto)
+
         nueva_reserva = Reserva(doc_limpio, usuario.nombre, horario_deseado, fecha)
         self.reservas.agregar(nueva_reserva)
         mensaje = (f"¡Reserva exitosa! {usuario.nombre} tiene su espacio a las "
                    f"{horario_deseado}. El tiempo para estar haciendo uso del gym es: "
                    f"{self.duracion_maxima_sesion}.")
-        # Notificación por correo (no bloquea la UI; se ignora si falta correo o credenciales)
-        if usuario.correo:
-            from notificador import enviar_confirmacion_reserva
-            enviar_confirmacion_reserva(
-                destinatario=usuario.correo,
+        correo_destino = contacto.correo if contacto else usuario.correo
+        celular_destino = contacto.celular if contacto else ""
+        if correo_destino or celular_destino:
+            self.notificador.notificar_reserva(
+                destinatario=correo_destino,
+                celular=celular_destino,
                 nombre_usuario=usuario.nombre,
                 horario=horario_deseado,
                 fecha=fecha,
@@ -127,7 +231,21 @@ class GymService:
         return reserva.cancelar()
 
     def confirmar_reserva(self, documento: str, horario: str, fecha: str, hora_actual: datetime | None = None) -> str:
-        """Reactiva una reserva previamente cancelada (R8)."""
+        """Reactiva una reserva cancelada y notifica usando el contacto persistido.
+
+        Parámetros:
+            documento: identificador del titular.
+            horario: franja original de la reserva.
+            fecha: fecha original de la reserva.
+            hora_actual: hora opcional para las validaciones temporales.
+
+        Retorna:
+            Mensaje con el resultado de la reactivación.
+
+        Excepciones:
+            ReservaNoEncontradaError, ReservaDuplicadaError, CupoLlenoError,
+            PersistenciaError si no puede consultarse el contacto almacenado.
+        """
         doc_limpio = str(documento).strip()
         horario = str(horario).strip()
         fecha = str(fecha).strip()
@@ -146,13 +264,15 @@ class GymService:
         self._exigir_sin_reserva_activa(doc_limpio, reserva.nombre_usuario, fecha)
         self._exigir_limite_semanal(doc_limpio, reserva.nombre_usuario, fecha)
         self._exigir_cupo(doc_limpio, horario, fecha)
-        resultado = reserva.confirmar()
-        # Notificación por correo al reactivar la reserva
         usuario = self.usuarios.buscar(doc_limpio)
-        if usuario and usuario.correo:
-            from notificador import enviar_confirmacion_reserva
-            enviar_confirmacion_reserva(
-                destinatario=usuario.correo,
+        contacto = self.obtener_contacto_usuario(doc_limpio)
+        resultado = reserva.confirmar()
+        correo_destino = contacto.correo if contacto else (usuario.correo if usuario else "")
+        celular_destino = contacto.celular if contacto else ""
+        if correo_destino or celular_destino:
+            self.notificador.notificar_reserva(
+                destinatario=correo_destino,
+                celular=celular_destino,
                 nombre_usuario=reserva.nombre_usuario,
                 horario=horario,
                 fecha=fecha,
